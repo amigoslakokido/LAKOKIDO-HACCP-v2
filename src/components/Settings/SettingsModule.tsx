@@ -81,6 +81,7 @@ export function SettingsModule() {
   const [isLocked, setIsLocked] = useState(true);
   const [passwordInput, setPasswordInput] = useState('');
   const [showPasswordError, setShowPasswordError] = useState(false);
+  const [authorizedEmail, setAuthorizedEmail] = useState('amigoslakokido@gmail.com');
 
   const [addingZone, setAddingZone] = useState(false);
   const [newZoneName, setNewZoneName] = useState('');
@@ -126,7 +127,23 @@ export function SettingsModule() {
     loadData();
     loadScheduleConfig();
     loadNotificationSettings();
+    loadAuthorizedEmail();
   }, []);
+
+  const loadAuthorizedEmail = async () => {
+    try {
+      const { data } = await supabase
+        .from('settings_password')
+        .select('authorized_email')
+        .maybeSingle();
+
+      if (data?.authorized_email) {
+        setAuthorizedEmail(data.authorized_email);
+      }
+    } catch (error) {
+      console.error('Error loading authorized email:', error);
+    }
+  };
 
   const loadScheduleConfig = async () => {
     try {
@@ -247,28 +264,51 @@ export function SettingsModule() {
     setEmailRecipients(emailRecipients.filter(e => e !== email));
   };
 
-  const handlePasswordSubmit = () => {
-    console.log('Password entered:', passwordInput);
-    console.log('Trimmed password:', passwordInput.trim());
+  const hashPassword = async (password: string): Promise<string> => {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(password);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    return hashHex;
+  };
 
-    if (passwordInput.trim() === 'adminstrasjon') {
-      console.log('✅ Password correct!');
-      setIsLocked(false);
-      setPasswordInput('');
-      setShowPasswordError(false);
-    } else {
-      console.log('❌ Password incorrect. Expected: adminstrasjon, Got:', passwordInput.trim());
+  const handlePasswordSubmit = async () => {
+    try {
+      const { data: passwordData } = await supabase
+        .from('settings_password')
+        .select('password_hash')
+        .maybeSingle();
+
+      if (!passwordData) {
+        setShowPasswordError(true);
+        setTimeout(() => setShowPasswordError(false), 3000);
+        return;
+      }
+
+      const inputHash = await hashPassword(passwordInput.trim());
+
+      if (inputHash === passwordData.password_hash) {
+        setIsLocked(false);
+        setPasswordInput('');
+        setShowPasswordError(false);
+      } else {
+        setShowPasswordError(true);
+        setTimeout(() => setShowPasswordError(false), 3000);
+      }
+    } catch (error) {
+      console.error('Error verifying password:', error);
       setShowPasswordError(true);
       setTimeout(() => setShowPasswordError(false), 3000);
     }
   };
 
-  const handlePasswordReset = () => {
+  const handlePasswordReset = async () => {
     const userEmail = prompt(
       'أدخل بريدك الإلكتروني للتحقق / Skriv inn din e-post for å bekrefte:'
     );
 
-    if (userEmail?.trim().toLowerCase() === 'amigoslakokido@gmail.com') {
+    if (userEmail?.trim().toLowerCase() === authorizedEmail.toLowerCase()) {
       const newPassword = prompt(
         '✅ تم التحقق من البريد الإلكتروني!\n' +
         'E-post bekreftet!\n\n' +
@@ -276,13 +316,33 @@ export function SettingsModule() {
       );
 
       if (newPassword && newPassword.trim()) {
-        alert(
-          '✅ تم تغيير كلمة السر بنجاح!\n' +
-          'Passord endret!\n\n' +
-          '⚠️ كلمة السر الجديدة: ' + newPassword.trim() + '\n' +
-          'Nytt passord: ' + newPassword.trim() + '\n\n' +
-          'يرجى حفظها في مكان آمن / Vennligst lagre det på et trygt sted'
-        );
+        try {
+          const newPasswordHash = await hashPassword(newPassword.trim());
+
+          const { error } = await supabase
+            .from('settings_password')
+            .update({
+              password_hash: newPasswordHash,
+              updated_at: new Date().toISOString()
+            })
+            .eq('authorized_email', authorizedEmail);
+
+          if (error) throw error;
+
+          alert(
+            '✅ تم تغيير كلمة السر بنجاح!\n' +
+            'Passord endret!\n\n' +
+            '⚠️ كلمة السر الجديدة: ' + newPassword.trim() + '\n' +
+            'Nytt passord: ' + newPassword.trim() + '\n\n' +
+            'يرجى حفظها في مكان آمن / Vennligst lagre det på et trygt sted'
+          );
+        } catch (error) {
+          console.error('Error updating password:', error);
+          alert(
+            '❌ حدث خطأ في تغيير كلمة السر\n' +
+            'En feil oppstod ved endring av passord'
+          );
+        }
       }
     } else if (userEmail) {
       alert(
@@ -290,7 +350,7 @@ export function SettingsModule() {
         'Feil e-post\n\n' +
         'للحصول على كلمة السر، تواصل مع:\n' +
         'For å få passordet, kontakt:\n\n' +
-        '📧 amigoslakokido@gmail.com'
+        '📧 ' + authorizedEmail
       );
     }
   };
@@ -764,7 +824,12 @@ export function SettingsModule() {
                 type="text"
                 value={passwordInput}
                 onChange={(e) => setPasswordInput(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && handlePasswordSubmit()}
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handlePasswordSubmit();
+                  }
+                }}
                 className="w-full px-5 py-4 border-3 border-blue-300 rounded-2xl focus:ring-4 focus:ring-blue-400 focus:border-blue-500 transition-all text-xl text-center font-bold text-gray-700 shadow-sm"
                 placeholder="••••••••"
                 autoFocus
