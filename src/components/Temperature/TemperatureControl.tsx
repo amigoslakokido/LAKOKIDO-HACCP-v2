@@ -77,9 +77,35 @@ export function TemperatureControl() {
     }
   };
 
-  const calculateStatus = (temp: number, min: number, max: number): 'safe' | 'warning' | 'danger' => {
+  const calculateStatus = (temp: number, equipment: Equipment): 'safe' | 'warning' | 'danger' => {
+    const min = equipment.min_temp;
+    const max = equipment.max_temp;
+    const isFreezer = equipment.type === 'freezer';
+    const isRefrigerator = equipment.type === 'refrigerator';
+
+    // Check if temperature is within standard range
     if (temp >= min && temp <= max) return 'safe';
-    if (temp >= min - 2 && temp <= max + 2) return 'warning';
+
+    // Check extended safe ranges for specific equipment types
+    if (isFreezer) {
+      // Freezers: -25 to -32 is acceptable (7 degrees below min is safe)
+      if (temp >= min - 7 && temp < min) return 'safe';
+      // Warning range: slightly outside extended range
+      if (temp >= min - 10 && temp < min - 7) return 'warning';
+      if (temp > max && temp <= max + 2) return 'warning';
+    } else if (isRefrigerator) {
+      // Refrigerators: -2 to -3 is acceptable (1 degree below min is safe)
+      if (temp >= min - 1 && temp < min) return 'safe';
+      // Warning range: slightly outside extended range
+      if (temp >= min - 2 && temp < min - 1) return 'warning';
+      if (temp > max && temp <= max + 2) return 'warning';
+    } else {
+      // Other equipment: standard warning range
+      if (temp >= min - 2 && temp < min) return 'warning';
+      if (temp > max && temp <= max + 2) return 'warning';
+    }
+
+    // Everything else is danger
     return 'danger';
   };
 
@@ -87,7 +113,7 @@ export function TemperatureControl() {
     const temp = parseFloat(temperatures[equipmentId]);
     if (isNaN(temp)) return;
 
-    const status = calculateStatus(temp, equipment.min_temp, equipment.max_temp);
+    const status = calculateStatus(temp, equipment);
     const today = new Date().toISOString().split('T')[0];
     const now = new Date();
     const timeString = now.toTimeString().split(' ')[0];

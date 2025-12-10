@@ -63,6 +63,8 @@ export async function generateIntelligentReport(options: GenerateReportOptions) 
     for (const item of items) {
       const minTemp = parseFloat(item.min_temp);
       const maxTemp = parseFloat(item.max_temp);
+      const isFreezer = item.type === 'freezer';
+      const isRefrigerator = item.type === 'refrigerator';
 
       const time = timeSlots[Math.floor(Math.random() * timeSlots.length)];
       let temp: number;
@@ -80,26 +82,69 @@ export async function generateIntelligentReport(options: GenerateReportOptions) 
                                Math.random() < 0.25;
 
       if (shouldHaveCritical) {
+        // Critical violations: temperature way outside acceptable range
         if (Math.random() < 0.5) {
+          // Too high
           temp = parseFloat((maxTemp + 2 + Math.random() * 2).toFixed(1));
         } else {
-          temp = parseFloat((minTemp - 2 - Math.random() * 2).toFixed(1));
+          // Too low (beyond extended safe range)
+          if (isFreezer) {
+            // For freezers: below -32 is critical
+            temp = parseFloat((-32 - Math.random() * 3).toFixed(1));
+          } else if (isRefrigerator) {
+            // For refrigerators: below -4 is critical
+            temp = parseFloat((-4 - Math.random() * 2).toFixed(1));
+          } else {
+            temp = parseFloat((minTemp - 3 - Math.random() * 2).toFixed(1));
+          }
         }
         status = 'danger';
         criticalViolationsAdded++;
       } else if (shouldHaveWarning) {
+        // Warning violations: slightly outside range
         if (Math.random() < 0.5) {
-          temp = parseFloat((minTemp - 0.5 - Math.random() * 1.5).toFixed(1));
-        } else {
+          // Too high
           temp = parseFloat((maxTemp + 0.5 + Math.random() * 1.5).toFixed(1));
+        } else {
+          // Too low (but still acceptable for some equipment types)
+          temp = parseFloat((minTemp - 0.5 - Math.random() * 1).toFixed(1));
         }
         status = 'warning';
         warningViolationsAdded++;
       } else {
-        const range = maxTemp - minTemp;
-        const safeRange = range * 0.7;
-        const offset = range * 0.15;
-        temp = parseFloat((minTemp + offset + Math.random() * safeRange).toFixed(1));
+        // Safe range - includes extended safe ranges for specific equipment types
+        if (isFreezer) {
+          // Freezers: safe from minTemp (e.g., -25) to -32
+          // Generate mostly in the standard range, occasionally in extended range
+          if (Math.random() < 0.7) {
+            // Standard range: minTemp to maxTemp
+            const range = maxTemp - minTemp;
+            const safeRange = range * 0.7;
+            const offset = range * 0.15;
+            temp = parseFloat((minTemp + offset + Math.random() * safeRange).toFixed(1));
+          } else {
+            // Extended safe range: minTemp to -32
+            temp = parseFloat((minTemp - Math.random() * 7).toFixed(1));
+          }
+        } else if (isRefrigerator) {
+          // Refrigerators: safe from minTemp (e.g., -2) to -3
+          if (Math.random() < 0.8) {
+            // Standard range: minTemp to maxTemp
+            const range = maxTemp - minTemp;
+            const safeRange = range * 0.7;
+            const offset = range * 0.15;
+            temp = parseFloat((minTemp + offset + Math.random() * safeRange).toFixed(1));
+          } else {
+            // Extended safe range: minTemp to -3
+            temp = parseFloat((minTemp - Math.random() * 1).toFixed(1));
+          }
+        } else {
+          // Other equipment: standard range only
+          const range = maxTemp - minTemp;
+          const safeRange = range * 0.7;
+          const offset = range * 0.15;
+          temp = parseFloat((minTemp + offset + Math.random() * safeRange).toFixed(1));
+        }
         status = 'safe';
       }
 
