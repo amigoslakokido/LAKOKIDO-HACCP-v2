@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../../../lib/supabase';
 import { Recycle, Plus, Save, Edit2, Trash2 } from 'lucide-react';
+import { SmartAssistant } from '../SmartAssistant';
 
 export function WasteManagement() {
   const [records, setRecords] = useState<any[]>([]);
@@ -71,6 +72,27 @@ export function WasteManagement() {
     return labels[type] || type;
   };
 
+  const handleAutoGenerate = async (content: any) => {
+    if (content.categories && Array.isArray(content.categories)) {
+      for (const category of content.categories) {
+        await supabase.from('hms_environment_waste').insert([{
+          waste_type: category.name.toLowerCase().includes('mat') ? 'matavfall' :
+                      category.name.toLowerCase().includes('plast') ? 'plast' :
+                      category.name.toLowerCase().includes('papp') || category.name.toLowerCase().includes('papir') ? 'papp' :
+                      category.name.toLowerCase().includes('glass') ? 'glass' : 'rest',
+          description: category.name,
+          collection_company: 'Local waste management',
+          collection_frequency: category.collection_frequency,
+          notes: `Beholder: ${category.container_type}`
+        }]);
+      }
+      loadRecords();
+      alert('Avfallskategorier lagt til!');
+    } else if (content.plan) {
+      alert('Avfallsplan opprettet! Legg til kategorier ved å klikke "Generer eksempelkategorier".');
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -81,6 +103,16 @@ export function WasteManagement() {
           <Plus className="w-4 h-4" /> Ny avfallstype
         </button>
       </div>
+
+      <SmartAssistant
+        section="waste-management"
+        data={{
+          plan: records.length > 0 ? { exists: true } : null,
+          categories: records,
+          lastReview: records.length > 0 ? records[0].updated_at : null
+        }}
+        onAutoGenerate={handleAutoGenerate}
+      />
 
       {showForm && (
         <div className="bg-white rounded-lg shadow p-6">

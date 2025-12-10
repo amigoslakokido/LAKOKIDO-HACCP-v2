@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../../../lib/supabase';
 import { Sparkles, Plus, Save, Edit2, Trash2 } from 'lucide-react';
+import { SmartAssistant } from '../SmartAssistant';
 
 export function CleaningProducts() {
   const [records, setRecords] = useState<any[]>([]);
@@ -60,6 +61,23 @@ export function CleaningProducts() {
     setShowForm(false);
   };
 
+  const handleAutoGenerate = async (content: any) => {
+    if (Array.isArray(content)) {
+      for (const product of content) {
+        await supabase.from('hms_environment_cleaning_products').insert([{
+          product_name: product.name,
+          supplier: product.supplier,
+          is_eco_friendly: true,
+          usage_areas: product.category,
+          description: `Standard ${product.category.toLowerCase()} produkt`,
+          safety_notes: product.hazard_level === 'Medium' ? 'Bruk hansker og god ventilasjon' : 'Følg instruksjoner på emballasjen'
+        }]);
+      }
+      loadRecords();
+      alert('Produkter lagt til!');
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -70,6 +88,12 @@ export function CleaningProducts() {
           <Plus className="w-4 h-4" /> Nytt produkt
         </button>
       </div>
+
+      <SmartAssistant
+        section="cleaning-products"
+        data={records}
+        onAutoGenerate={handleAutoGenerate}
+      />
 
       <div className="bg-green-50 border border-green-200 rounded-lg p-4">
         <p className="text-sm text-green-800">
