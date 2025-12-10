@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { AlertTriangle, Plus, Edit2, Trash2, Save, X, Calendar, User, FileText, Image as ImageIcon, Download } from 'lucide-react';
 import { hmsApi } from '../../lib/hmsSupabase';
-import jsPDF from 'jspdf';
+import { generateRiskAssessmentPDF } from '../../utils/hmsPdfGenerator';
 import { AssistantPanel } from './AssistantPanel';
 
 interface RiskAssessment {
@@ -140,62 +140,7 @@ export function RiskAssessment() {
   };
 
   const generatePDF = () => {
-    const doc = new jsPDF();
-    let yPos = 20;
-
-    doc.setFontSize(18);
-    doc.text('Risikovurdering / Risk Assessment', 14, yPos);
-    yPos += 10;
-
-    doc.setFontSize(11);
-    doc.text(`Generert: ${new Date().toLocaleDateString('nb-NO')}`, 14, yPos);
-    yPos += 15;
-
-    risks.forEach((risk, index) => {
-      if (yPos > 250) {
-        doc.addPage();
-        yPos = 20;
-      }
-
-      doc.setFontSize(14);
-      doc.setFont('helvetica', 'bold');
-      doc.text(`${index + 1}. ${risk.hazard_type}`, 14, yPos);
-      yPos += 7;
-
-      doc.setFontSize(10);
-      doc.setFont('helvetica', 'normal');
-
-      doc.text(`Beskrivelse: ${risk.hazard_description}`, 14, yPos);
-      yPos += 6;
-
-      doc.text(`Sannsynlighet: ${risk.likelihood}/5 | Konsekvens: ${risk.consequence}/5 | Risiko: ${risk.risk_score}`, 14, yPos);
-      yPos += 6;
-
-      doc.setFont('helvetica', 'bold');
-      const riskColor = risk.risk_level === 'Kritisk' ? [255, 0, 0] :
-                        risk.risk_level === 'Høy' ? [255, 140, 0] :
-                        risk.risk_level === 'Middels' ? [255, 200, 0] : [0, 150, 0];
-      doc.setTextColor(riskColor[0], riskColor[1], riskColor[2]);
-      doc.text(`Risikonivå: ${risk.risk_level}`, 14, yPos);
-      doc.setTextColor(0, 0, 0);
-      yPos += 7;
-
-      doc.setFont('helvetica', 'normal');
-      doc.text(`Tiltak: ${risk.preventive_measures}`, 14, yPos);
-      yPos += 6;
-
-      doc.text(`Ansvarlig: ${risk.responsible_person} | Status: ${risk.status}`, 14, yPos);
-      yPos += 6;
-
-      if (risk.deadline) {
-        doc.text(`Frist: ${new Date(risk.deadline).toLocaleDateString('nb-NO')}`, 14, yPos);
-        yPos += 6;
-      }
-
-      yPos += 5;
-    });
-
-    doc.save('risikovurdering.pdf');
+    generateRiskAssessmentPDF(risks);
   };
 
   const getExecuteActions = () => {

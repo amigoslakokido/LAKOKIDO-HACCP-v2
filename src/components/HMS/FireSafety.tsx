@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Flame, Plus, Edit2, Trash2, Save, X, Download, AlertTriangle, CheckCircle, Upload, FileText, MapPin, Calendar } from 'lucide-react';
 import { hmsApi } from '../../lib/hmsSupabase';
-import jsPDF from 'jspdf';
+import { generateFireSafetyPDF } from '../../utils/hmsPdfGenerator';
 import { AssistantPanel } from './AssistantPanel';
 
 interface FireResponsible {
@@ -412,84 +412,11 @@ export function FireSafety() {
   };
 
   const generatePDF = () => {
-    const doc = new jsPDF();
-    let yPos = 20;
-
-    doc.setFontSize(18);
-    doc.text('Brannsikkerhet - Oversikt', 14, yPos);
-    yPos += 15;
-
-    if (fireResponsible) {
-      doc.setFontSize(14);
-      doc.setFont('helvetica', 'bold');
-      doc.text('Brannansvarlig', 14, yPos);
-      yPos += 8;
-
-      doc.setFontSize(10);
-      doc.setFont('helvetica', 'normal');
-      doc.text(`Navn: ${fireResponsible.name}`, 16, yPos);
-      yPos += 6;
-      if (fireResponsible.phone) {
-        doc.text(`Telefon: ${fireResponsible.phone}`, 16, yPos);
-        yPos += 6;
-      }
-      if (fireResponsible.email) {
-        doc.text(`E-post: ${fireResponsible.email}`, 16, yPos);
-        yPos += 6;
-      }
-      yPos += 10;
-    }
-
-    doc.setFontSize(14);
-    doc.setFont('helvetica', 'bold');
-    doc.text('Brannslukningsutstyr', 14, yPos);
-    yPos += 8;
-
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'normal');
-    equipment.forEach((eq) => {
-      if (yPos > 270) {
-        doc.addPage();
-        yPos = 20;
-      }
-      doc.text(`${eq.equipment_type} - ${eq.location} (${eq.status})`, 16, yPos);
-      yPos += 6;
+    generateFireSafetyPDF({
+      responsible: fireResponsible,
+      equipment,
+      inspections
     });
-
-    yPos += 10;
-
-    doc.setFontSize(14);
-    doc.setFont('helvetica', 'bold');
-    doc.text('Siste sjekklister', 14, yPos);
-    yPos += 8;
-
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'normal');
-    inspections.slice(0, 5).forEach((insp) => {
-      if (yPos > 250) {
-        doc.addPage();
-        yPos = 20;
-      }
-      doc.text(`${insp.inspection_type} - ${new Date(insp.inspection_date).toLocaleDateString('nb-NO')} - ${insp.status}`, 16, yPos);
-      yPos += 6;
-
-      if (insp.checklist_items && insp.checklist_items.items) {
-        doc.setFontSize(8);
-        insp.checklist_items.items.forEach((item: any) => {
-          if (yPos > 270) {
-            doc.addPage();
-            yPos = 20;
-          }
-          const statusSymbol = item.status === 'OK' ? '✓' : '✗';
-          doc.text(`  ${statusSymbol} ${item.name}`, 18, yPos);
-          yPos += 4;
-        });
-        doc.setFontSize(10);
-        yPos += 4;
-      }
-    });
-
-    doc.save('brannsikkerhet.pdf');
   };
 
   const getStatusColor = (status: string) => {

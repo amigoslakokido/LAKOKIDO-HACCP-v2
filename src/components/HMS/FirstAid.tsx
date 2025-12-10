@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Heart, Plus, Edit2, Trash2, Save, X, User, Mail, Phone, Building2, Calendar, FileText, Package, CheckCircle, AlertCircle, Download, Image as ImageIcon } from 'lucide-react';
 import { hmsApi } from '../../lib/hmsSupabase';
-import jsPDF from 'jspdf';
+import { generateFirstAidPDF } from '../../utils/hmsPdfGenerator';
 import { AssistantPanel } from './AssistantPanel';
 
 interface FirstAidResponsible {
@@ -181,59 +181,11 @@ export function FirstAid() {
   };
 
   const exportToPDF = () => {
-    const doc = new jsPDF();
-
-    doc.setFontSize(18);
-    doc.text('Førstehjelp - Utstyrsliste og Kontrollhistorikk', 14, 20);
-
-    doc.setFontSize(12);
-    doc.text(`Generert: ${new Date().toLocaleDateString('nb-NO')}`, 14, 30);
-
-    let yPos = 45;
-
-    if (responsible) {
-      doc.setFontSize(14);
-      doc.text('Førstehjelpsansvarlig:', 14, yPos);
-      yPos += 8;
-      doc.setFontSize(10);
-      doc.text(`Navn: ${responsible.name}`, 20, yPos);
-      yPos += 6;
-      doc.text(`Avdeling: ${responsible.department}`, 20, yPos);
-      yPos += 6;
-      doc.text(`Status: ${responsible.status}`, 20, yPos);
-      yPos += 12;
-    }
-
-    doc.setFontSize(14);
-    doc.text('Utstyrsliste:', 14, yPos);
-    yPos += 8;
-
-    doc.setFontSize(10);
-    equipment.forEach((item, index) => {
-      if (yPos > 270) {
-        doc.addPage();
-        yPos = 20;
-      }
-      doc.text(`${index + 1}. ${item.equipment_name} - Antall: ${item.quantity} - Tilstand: ${item.condition}`, 20, yPos);
-      yPos += 6;
+    generateFirstAidPDF({
+      responsible,
+      equipment,
+      inspections
     });
-
-    yPos += 10;
-    doc.setFontSize(14);
-    doc.text('Kontrollhistorikk (siste 10):', 14, yPos);
-    yPos += 8;
-
-    doc.setFontSize(10);
-    inspections.slice(0, 10).forEach((insp) => {
-      if (yPos > 270) {
-        doc.addPage();
-        yPos = 20;
-      }
-      doc.text(`${new Date(insp.inspection_date).toLocaleDateString('nb-NO')} - ${insp.inspection_type} - ${insp.inspected_by}`, 20, yPos);
-      yPos += 6;
-    });
-
-    doc.save('forstehjelp-rapport.pdf');
   };
 
   const getStatusColor = (status: string) => {
