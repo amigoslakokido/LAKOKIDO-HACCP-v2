@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { hmsApi, HMSReport } from '../../lib/hmsSupabase';
 import { hmsAiApi } from '../../lib/hmsAiApi';
 import { HMSPdfGenerator } from '../../utils/hmsPdfGenerator';
+import { HMSReportsList } from './HMSReportsList';
 import {
   FileText,
   Plus,
@@ -387,6 +388,15 @@ export function UnifiedReports() {
 
   return (
     <div className="space-y-6">
+
+      {/* قائمة التقارير الموجودة */}
+      <HMSReportsList />
+
+      <div className="mt-12 mb-6">
+        <h2 className="text-2xl font-bold text-gray-900 mb-2">Opprett ny rapport</h2>
+        <p className="text-gray-600">Generer nye HMS-rapporter manuelt eller automatisk</p>
+      </div>
+
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold text-slate-900">HMS Rapporter</h2>
