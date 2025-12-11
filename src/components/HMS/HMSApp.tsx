@@ -20,6 +20,7 @@ import { HMSTraining } from './HMSTraining';
 import { EnvironmentMain } from './EnvironmentMain';
 import { DocumentsManager } from './DocumentsManager';
 import { AIAnalytics } from './AIAnalytics';
+import { AutoReportsGenerator } from '../Settings/AutoReportsGenerator';
 import {
   LayoutDashboard,
   AlertTriangle,
@@ -190,6 +191,14 @@ export function HMSApp() {
         { id: 'reports-export', name: 'Eksporter', icon: FileCheck },
       ]
     },
+    {
+      id: 'settings',
+      name: '⚙️ Innstillinger',
+      icon: Wrench,
+      items: [
+        { id: 'settings-reports', name: 'Automatiske rapporter', icon: FileText },
+      ]
+    },
   ];
 
   const toggleItem = (id: string) => {
@@ -256,6 +265,8 @@ export function HMSApp() {
         return <Maintenance />;
       case 'documents-manager':
         return <DocumentsManager />;
+      case 'settings-reports':
+        return <AutoReportsGenerator />;
 
       default:
         const currentItem = navigationItems
