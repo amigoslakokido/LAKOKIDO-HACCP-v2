@@ -1,5 +1,7 @@
 import { supabase } from './supabase';
 
+export { supabase };
+
 export interface HMSIncident {
   id: string;
   incident_number: string;

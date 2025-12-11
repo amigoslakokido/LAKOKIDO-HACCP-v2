@@ -13,7 +13,7 @@ import {
   Trash2,
   Eye
 } from 'lucide-react';
-import { supabase } from '../../lib/supabase';
+import { hmsApi, supabase } from '../../lib/hmsSupabase';
 import { LocalAssistant } from './LocalAssistant';
 import jsPDF from 'jspdf';
 
@@ -176,30 +176,42 @@ export function AutoReportsGenerator() {
 
       const pdfBlob = await generatePDF(template, reportData, startDate, endDate);
 
+      const reportNumber = `HMS-${Date.now()}`;
+
       const { data: report, error } = await supabase
         .from('hms_reports')
         .insert([{
-          report_type: template.report_type,
+          report_number: reportNumber,
+          report_type: 'monthly',
           title: `${template.template_name} - ${endDate.toLocaleDateString('nb-NO')}`,
+          summary: reportData.summary || 'Automatisk generert rapport',
           start_date: startDate.toISOString().split('T')[0],
           end_date: endDate.toISOString().split('T')[0],
-          generated_by: 'Auto-generert',
-          status: 'completed',
-          compliance_score: reportData.compliance_score,
           total_incidents: reportData.total_incidents || 0,
+          safety_incidents: 0,
+          environment_incidents: 0,
+          health_incidents: 0,
+          deviations: 0,
+          compliance_score: reportData.compliance_score || 85,
+          ai_insights: '',
           recommendations: reportData.recommendations || '',
-          summary: reportData.summary || ''
+          generated_by: 'Auto-generert',
+          created_by: 'system',
+          status: 'approved'
         }])
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Database error:', error);
+        throw new Error(`Database error: ${error.message}`);
+      }
 
       loadReports();
       alert(`Rapport "${template.template_name}" er generert!`);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error generating report:', error);
-      alert('Kunne ikke generere rapport');
+      alert(`Kunne ikke generere rapport: ${error.message || 'Ukjent feil'}`);
     }
     setGenerating(false);
   };
@@ -248,89 +260,152 @@ export function AutoReportsGenerator() {
   };
 
   const collectArbeidstilsynetData = async (startDate: Date, endDate: Date) => {
-    const [company, risks, incidents, training] = await Promise.all([
-      supabase.from('hms_company_settings').select('*').single(),
-      supabase.from('hms_risk_assessments').select('*'),
-      supabase.from('hms_incidents').select('*').gte('incident_date', startDate.toISOString()).lte('incident_date', endDate.toISOString()),
-      supabase.from('hms_training_records').select('*').gte('training_date', startDate.toISOString()).lte('training_date', endDate.toISOString())
-    ]);
+    try {
+      const [company, risks, incidents, training] = await Promise.all([
+        supabase.from('hms_company_settings').select('*').maybeSingle(),
+        supabase.from('hms_risk_assessments').select('*'),
+        supabase.from('hms_incidents').select('*').gte('incident_date', startDate.toISOString().split('T')[0]).lte('incident_date', endDate.toISOString().split('T')[0]),
+        supabase.from('hms_training_records').select('*').gte('training_date', startDate.toISOString().split('T')[0]).lte('training_date', endDate.toISOString().split('T')[0])
+      ]);
 
-    return {
-      company: company.data,
-      risk_count: risks.data?.length || 0,
-      high_risks: risks.data?.filter((r: any) => r.risk_level === 'Høy' || r.risk_level === 'Kritisk').length || 0,
-      incident_count: incidents.data?.length || 0,
-      training_count: training.data?.length || 0
-    };
+      return {
+        company: company.data,
+        risk_count: risks.data?.length || 0,
+        high_risks: risks.data?.filter((r: any) => r.risk_level === 'Høy' || r.risk_level === 'Kritisk').length || 0,
+        incident_count: incidents.data?.length || 0,
+        training_count: training.data?.length || 0
+      };
+    } catch (error) {
+      console.error('Error collecting Arbeidstilsynet data:', error);
+      return {
+        company: null,
+        risk_count: 0,
+        high_risks: 0,
+        incident_count: 0,
+        training_count: 0
+      };
+    }
   };
 
   const collectFireSafetyData = async (startDate: Date, endDate: Date) => {
-    const equipment = await supabase.from('hms_fire_safety_equipment').select('*');
+    try {
+      const equipment = await supabase.from('hms_fire_safety_equipment').select('*');
 
-    return {
-      total_equipment: equipment.data?.length || 0,
-      defect_equipment: equipment.data?.filter((e: any) => e.status === 'Defekt' || e.status === 'Trenger service').length || 0,
-      operational: equipment.data?.filter((e: any) => e.status === 'Operativ').length || 0
-    };
+      return {
+        total_equipment: equipment.data?.length || 0,
+        defect_equipment: equipment.data?.filter((e: any) => e.status === 'Defekt' || e.status === 'Trenger service').length || 0,
+        operational: equipment.data?.filter((e: any) => e.status === 'Operativ').length || 0
+      };
+    } catch (error) {
+      console.error('Error collecting fire safety data:', error);
+      return {
+        total_equipment: 0,
+        defect_equipment: 0,
+        operational: 0
+      };
+    }
   };
 
   const collectTrainingData = async (startDate: Date, endDate: Date) => {
-    const training = await supabase
-      .from('hms_training_records')
-      .select('*')
-      .gte('training_date', startDate.toISOString())
-      .lte('training_date', endDate.toISOString());
+    try {
+      const training = await supabase
+        .from('hms_training_records')
+        .select('*')
+        .gte('training_date', startDate.toISOString().split('T')[0])
+        .lte('training_date', endDate.toISOString().split('T')[0]);
 
-    return {
-      total_sessions: training.data?.length || 0,
-      total_participants: training.data?.reduce((sum: number, t: any) => sum + (t.participants?.length || 0), 0) || 0,
-      completion_rate: 95
-    };
+      return {
+        total_sessions: training.data?.length || 0,
+        total_participants: training.data?.reduce((sum: number, t: any) => sum + (t.participants?.length || 0), 0) || 0,
+        completion_rate: 95
+      };
+    } catch (error) {
+      console.error('Error collecting training data:', error);
+      return {
+        total_sessions: 0,
+        total_participants: 0,
+        completion_rate: 0
+      };
+    }
   };
 
   const collectIncidentsData = async (startDate: Date, endDate: Date) => {
-    const incidents = await supabase
-      .from('hms_incidents')
-      .select('*')
-      .gte('incident_date', startDate.toISOString())
-      .lte('incident_date', endDate.toISOString());
+    try {
+      const incidents = await supabase
+        .from('hms_incidents')
+        .select('*')
+        .gte('incident_date', startDate.toISOString().split('T')[0])
+        .lte('incident_date', endDate.toISOString().split('T')[0]);
 
-    return {
-      total: incidents.data?.length || 0,
-      critical: incidents.data?.filter((i: any) => i.severity === 'Kritisk').length || 0,
-      high: incidents.data?.filter((i: any) => i.severity === 'Høy').length || 0,
-      medium: incidents.data?.filter((i: any) => i.severity === 'Middels').length || 0,
-      low: incidents.data?.filter((i: any) => i.severity === 'Lav').length || 0
-    };
+      return {
+        total: incidents.data?.length || 0,
+        critical: incidents.data?.filter((i: any) => i.severity === 'critical').length || 0,
+        high: incidents.data?.filter((i: any) => i.severity === 'high').length || 0,
+        medium: incidents.data?.filter((i: any) => i.severity === 'medium').length || 0,
+        low: incidents.data?.filter((i: any) => i.severity === 'low').length || 0
+      };
+    } catch (error) {
+      console.error('Error collecting incidents data:', error);
+      return {
+        total: 0,
+        critical: 0,
+        high: 0,
+        medium: 0,
+        low: 0
+      };
+    }
   };
 
   const collectEnvironmentData = async (startDate: Date, endDate: Date) => {
-    const [waste, products, goals] = await Promise.all([
-      supabase.from('hms_environment_waste').select('*'),
-      supabase.from('hms_environment_cleaning_products').select('*'),
-      supabase.from('hms_environment_goals').select('*')
-    ]);
+    try {
+      const [waste, products, goals] = await Promise.all([
+        supabase.from('hms_environment_waste').select('*'),
+        supabase.from('hms_environment_cleaning_products').select('*'),
+        supabase.from('hms_environment_goals').select('*')
+      ]);
 
-    return {
-      waste_categories: waste.data?.length || 0,
-      cleaning_products: products.data?.length || 0,
-      eco_friendly: products.data?.filter((p: any) => p.is_eco_friendly).length || 0,
-      active_goals: goals.data?.filter((g: any) => g.status === 'Aktiv').length || 0,
-      completed_goals: goals.data?.filter((g: any) => g.status === 'Fullført').length || 0
-    };
+      return {
+        waste_categories: waste.data?.length || 0,
+        cleaning_products: products.data?.length || 0,
+        eco_friendly: products.data?.filter((p: any) => p.is_eco_friendly).length || 0,
+        active_goals: goals.data?.filter((g: any) => g.status === 'Aktiv').length || 0,
+        completed_goals: goals.data?.filter((g: any) => g.status === 'Fullført').length || 0
+      };
+    } catch (error) {
+      console.error('Error collecting environment data:', error);
+      return {
+        waste_categories: 0,
+        cleaning_products: 0,
+        eco_friendly: 0,
+        active_goals: 0,
+        completed_goals: 0
+      };
+    }
   };
 
   const collectRiskAssessmentData = async (startDate: Date, endDate: Date) => {
-    const risks = await supabase.from('hms_risk_assessments').select('*');
+    try {
+      const risks = await supabase.from('hms_risk_assessments').select('*');
 
-    return {
-      total: risks.data?.length || 0,
-      critical: risks.data?.filter((r: any) => r.risk_level === 'Kritisk').length || 0,
-      high: risks.data?.filter((r: any) => r.risk_level === 'Høy').length || 0,
-      medium: risks.data?.filter((r: any) => r.risk_level === 'Middels').length || 0,
-      low: risks.data?.filter((r: any) => r.risk_level === 'Lav').length || 0,
-      with_measures: risks.data?.filter((r: any) => r.measures && r.measures.length > 0).length || 0
-    };
+      return {
+        total: risks.data?.length || 0,
+        critical: risks.data?.filter((r: any) => r.risk_level === 'Kritisk').length || 0,
+        high: risks.data?.filter((r: any) => r.risk_level === 'Høy').length || 0,
+        medium: risks.data?.filter((r: any) => r.risk_level === 'Middels').length || 0,
+        low: risks.data?.filter((r: any) => r.risk_level === 'Lav').length || 0,
+        with_measures: risks.data?.filter((r: any) => r.measures && r.measures.length > 0).length || 0
+      };
+    } catch (error) {
+      console.error('Error collecting risk assessment data:', error);
+      return {
+        total: 0,
+        critical: 0,
+        high: 0,
+        medium: 0,
+        low: 0,
+        with_measures: 0
+      };
+    }
   };
 
   const generatePDF = async (template: ReportTemplate, data: any, startDate: Date, endDate: Date) => {

@@ -19,7 +19,6 @@ import { Evacuation } from './Evacuation';
 import { HMSTraining } from './HMSTraining';
 import { EnvironmentMain } from './EnvironmentMain';
 import { DocumentsManager } from './DocumentsManager';
-import { AIAnalytics } from './AIAnalytics';
 import { AutoReportsGenerator } from '../Settings/AutoReportsGenerator';
 import {
   LayoutDashboard,
@@ -75,7 +74,6 @@ export function HMSApp() {
       icon: LayoutDashboard,
       items: [
         { id: 'dashboard-overview', name: 'Oversikt', icon: TrendingUp },
-        { id: 'dashboard-ai', name: 'AI Analytics', icon: Brain },
       ]
     },
     {
@@ -226,8 +224,6 @@ export function HMSApp() {
       case 'dashboard-overview':
       case 'dashboard':
         return <HMSDashboard />;
-      case 'dashboard-ai':
-        return <AIAnalytics />;
       case 'goals-hms':
         return <Goals />;
       case 'goals-policies':
