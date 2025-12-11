@@ -561,11 +561,11 @@ export function SmartAssistant({ section, data, onAutoGenerate, customChecks }: 
 
   return (
     <div className="bg-gradient-to-r from-blue-50 to-purple-50 border-2 border-blue-200 rounded-lg shadow-lg mb-6">
-      <button
-        onClick={() => setExpanded(!expanded)}
-        className="w-full flex items-center justify-between p-4 hover:bg-white/50 transition-colors rounded-t-lg"
-      >
-        <div className="flex items-center gap-3">
+      <div className="w-full flex items-center justify-between p-4 hover:bg-white/50 transition-colors rounded-t-lg">
+        <button
+          onClick={() => setExpanded(!expanded)}
+          className="flex items-center gap-3 flex-1"
+        >
           <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
             <Sparkles className="w-6 h-6 text-white" />
           </div>
@@ -575,14 +575,11 @@ export function SmartAssistant({ section, data, onAutoGenerate, customChecks }: 
               {messages.length} {messages.length === 1 ? 'melding' : 'meldinger'}
             </p>
           </div>
-        </div>
+        </button>
         <div className="flex items-center gap-2">
           {aiEnabled && (
             <button
-              onClick={(e) => {
-                e.stopPropagation();
-                runAIAnalysis();
-              }}
+              onClick={runAIAnalysis}
               disabled={analyzing}
               className="flex items-center gap-2 px-3 py-1.5 bg-purple-600 text-white text-sm rounded-lg hover:bg-purple-700 disabled:bg-gray-400"
             >
@@ -599,9 +596,11 @@ export function SmartAssistant({ section, data, onAutoGenerate, customChecks }: 
               )}
             </button>
           )}
-          {expanded ? <ChevronUp className="w-5 h-5 text-gray-600" /> : <ChevronDown className="w-5 h-5 text-gray-600" />}
+          <button onClick={() => setExpanded(!expanded)} className="p-1">
+            {expanded ? <ChevronUp className="w-5 h-5 text-gray-600" /> : <ChevronDown className="w-5 h-5 text-gray-600" />}
+          </button>
         </div>
-      </button>
+      </div>
 
       {expanded && (
         <div className="p-4 pt-0 space-y-3">
