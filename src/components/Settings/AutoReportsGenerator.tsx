@@ -14,7 +14,7 @@ import {
   Eye
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
-import { SmartAssistant } from '../HMS/SmartAssistant';
+import { LocalAssistant } from './LocalAssistant';
 import jsPDF from 'jspdf';
 
 interface ReportTemplate {
@@ -455,35 +455,39 @@ export function AutoReportsGenerator() {
                 </div>
               </div>
 
-              <SmartAssistant
-                section={template.report_type}
-                data={{ template, reports: reports.filter(r => r.report_type === template.report_type) }}
-                customChecks={(data) => {
-                  const messages = [];
-                  const lastReport = data.reports[0];
+              <LocalAssistant
+                hints={(() => {
+                  const hints = [];
+                  const lastReport = reports.filter(r => r.report_type === template.report_type)[0];
 
                   if (!lastReport) {
-                    messages.push({
+                    hints.push({
                       type: 'warning' as const,
                       title: 'Ingen rapport',
                       message: 'Ingen rapport er generert ennå. Klikk "Generer rapport" for å starte.'
                     });
                   } else if (overdue) {
-                    messages.push({
+                    hints.push({
                       type: 'error' as const,
                       title: 'Forfalt rapport',
                       message: `Neste rapport skulle vært generert. Generer en ny rapport nå.`
                     });
                   } else if (nextDue.includes('7 dager') || nextDue.includes('i morgen') || nextDue.includes('i dag')) {
-                    messages.push({
+                    hints.push({
                       type: 'warning' as const,
                       title: 'Nærmer seg',
                       message: `Neste rapport ${nextDue.toLowerCase()}. Forbered data.`
                     });
+                  } else {
+                    hints.push({
+                      type: 'success' as const,
+                      title: 'Alt ser bra ut',
+                      message: nextDue
+                    });
                   }
 
-                  return messages;
-                }}
+                  return hints;
+                })()}
               />
 
               <button
