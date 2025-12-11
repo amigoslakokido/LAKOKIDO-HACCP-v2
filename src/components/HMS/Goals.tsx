@@ -1,19 +1,88 @@
 import { useState } from 'react';
-import { Target, CheckCircle2, Leaf, Shield, TrendingUp, Users, FileText, AlertCircle } from 'lucide-react';
+import { Target, CheckCircle2, Leaf, Shield, TrendingUp, Users, FileText, AlertCircle, Download, Printer } from 'lucide-react';
+import { HMSPdfGenerator } from '../../utils/hmsPdfGenerator';
 
 export function Goals() {
   const [activeTab, setActiveTab] = useState<'overview' | 'edit'>('overview');
 
+  const downloadPDF = () => {
+    const pdf = new HMSPdfGenerator();
+
+    pdf.addHeader({
+      title: 'HMS-mål',
+      subtitle: 'Helse, Miljø og Sikkerhet',
+      companyName: 'Amigos la Kokido AS',
+      generatedDate: new Date(),
+    });
+
+    pdf.addSectionTitle('Formål', 'primary');
+    pdf.addText(
+      'Formålet med HMS-arbeidet i Amigos la Kokido AS er å sikre et fullt forsvarlig arbeidsmiljø for alle ansatte, gjester og samarbeidspartnere. Virksomheten forplikter seg til å arbeide systematisk og kontinuerlig med helse, miljø og sikkerhet i tråd med kravene i Internkontrollforskriften og Arbeidsmiljøloven.'
+    );
+    pdf.addSpacing(10);
+
+    pdf.addSectionTitle('Hovedmål', 'success');
+    pdf.addBulletList([
+      'Å forebygge ulykker, skader og helsesvekkelser ved hjelp av gode rutiner, opplæring og regelmessige kontroller.',
+      'Å sikre et trygt og trivelig arbeidsmiljø som fremmer trivsel, samarbeid og respekt mellom ansatte.',
+      'Å beskytte ytre miljøet gjennom ansvarlig håndtering av avfall, olje, fett, kjemikalier og energi.',
+      'Å opprettholde kontinuerlig forbedring av HMS-arbeidet gjennom systematisk evaluering og justering.',
+    ]);
+    pdf.addSpacing(10);
+
+    pdf.addSectionTitle('Konkrete mål for 2025', 'info');
+    pdf.addNumberedList([
+      'Null arbeidsulykker med fravær',
+      'Maksimalt 5% korttidsfravær',
+      '100% av ansatte gjennomfører obligatorisk HMS-opplæring',
+      'Alle hendelser og avvik skal lukkes innen 30 dager',
+      'Redusere avfallsmengde med 10%',
+      'Gjennomføre minimum 4 brannøvelser i året',
+      'Opprettholde mattrygghetsscore over 95%',
+      'Alle medarbeidersamtaler gjennomføres innen Q1',
+    ]);
+    pdf.addSpacing(10);
+
+    pdf.addSectionTitle('Oppfølging og evaluering', 'warning');
+    pdf.addText(
+      'HMS-målene skal evalueres kvartalsvis i ledermøter. Resultatene skal presenteres for alle ansatte og følges opp med konkrete tiltak ved avvik.'
+    );
+
+    pdf.save('HMS-Mal-Amigos-la-Kokido.pdf');
+  };
+
+  const handlePrint = () => {
+    window.print();
+  };
+
   return (
     <div className="space-y-6">
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-        <div className="flex items-center gap-3 mb-4">
-          <div className="w-12 h-12 bg-gradient-to-br from-purple-600 to-pink-600 rounded-xl flex items-center justify-center">
-            <Target className="w-6 h-6 text-white" />
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 bg-gradient-to-br from-purple-600 to-pink-600 rounded-xl flex items-center justify-center">
+              <Target className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold text-slate-900">HMS-mål</h1>
+              <p className="text-sm text-slate-600">Amigos la Kokido AS</p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-2xl font-bold text-slate-900">HMS-mål</h1>
-            <p className="text-sm text-slate-600">Amigos la Kokido AS</p>
+          <div className="flex gap-2">
+            <button
+              onClick={downloadPDF}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all font-medium text-sm"
+            >
+              <Download className="w-4 h-4" />
+              Last ned PDF
+            </button>
+            <button
+              onClick={handlePrint}
+              className="flex items-center gap-2 px-4 py-2 bg-slate-600 text-white rounded-lg hover:bg-slate-700 transition-all font-medium text-sm"
+            >
+              <Printer className="w-4 h-4" />
+              Skriv ut
+            </button>
           </div>
         </div>
 

@@ -1,8 +1,65 @@
 import { useState } from 'react';
-import { Users, Shield, ChefHat, Truck, Building2, UserCheck, AlertCircle, Edit3, CheckCircle2 } from 'lucide-react';
+import { Users, Shield, ChefHat, Truck, Building2, UserCheck, AlertCircle, Edit3, CheckCircle2, Download, Printer } from 'lucide-react';
+import { HMSPdfGenerator } from '../../utils/hmsPdfGenerator';
 
 export function OrganizationChart() {
   const [activeTab, setActiveTab] = useState<'overview' | 'edit'>('overview');
+
+  const downloadPDF = () => {
+    const pdf = new HMSPdfGenerator();
+
+    pdf.addHeader({
+      title: 'Organisasjonskart',
+      subtitle: 'HMS Organisasjonsstruktur',
+      companyName: 'Amigos la Kokido AS',
+      generatedDate: new Date(),
+    });
+
+    pdf.addSectionTitle('Om organisasjonskartet', 'info');
+    pdf.addText(
+      'Dette er en forenklet organisasjonsstruktur tilpasset fast food-bransjen. Den er utformet for å være klar, enkel å forstå, og i tråd med kravene fra Arbeidstilsynet.'
+    );
+    pdf.addSpacing(10);
+
+    pdf.addSectionTitle('Ledelse', 'primary');
+    pdf.addText('Daglig leder: Gourg Mounir Brsoum');
+    pdf.addText('Overordnet ansvar for HMS, drift, økonomi og personalledelse');
+    pdf.addSpacing(10);
+
+    pdf.addSectionTitle('Hovedroller', 'success');
+
+    pdf.addText('HMS-ansvarlig:');
+    pdf.addBulletList([
+      'Koordinere HMS-arbeidet',
+      'Følge opp avvik og hendelser',
+      'Sørge for opplæring og vernerunder',
+      'Holde HMS-dokumentasjon oppdatert',
+    ]);
+    pdf.addSpacing(5);
+
+    pdf.addText('Kjøkkensjef:');
+    pdf.addBulletList([
+      'Ansvar for matsikkerhet og HACCP',
+      'Lede kjøkkenpersonalet',
+      'Sørge for ryddighet og orden',
+      'Bestille varer og følge opp leverandører',
+    ]);
+    pdf.addSpacing(5);
+
+    pdf.addText('Servitører og Betjening:');
+    pdf.addBulletList([
+      'Gi god kundeservice',
+      'Holde serveringsområdet rent',
+      'Følge HMS-rutiner for servering',
+      'Melde fra om avvik',
+    ]);
+
+    pdf.save('Organisasjonskart-Amigos-la-Kokido.pdf');
+  };
+
+  const handlePrint = () => {
+    window.print();
+  };
 
   return (
     <div className="space-y-6">
@@ -16,6 +73,22 @@ export function OrganizationChart() {
               <h1 className="text-2xl font-bold text-slate-900">Organisasjonskart</h1>
               <p className="text-sm text-slate-600">Amigos la Kokido AS</p>
             </div>
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={downloadPDF}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all font-medium text-sm"
+            >
+              <Download className="w-4 h-4" />
+              Last ned PDF
+            </button>
+            <button
+              onClick={handlePrint}
+              className="flex items-center gap-2 px-4 py-2 bg-slate-600 text-white rounded-lg hover:bg-slate-700 transition-all font-medium text-sm"
+            >
+              <Printer className="w-4 h-4" />
+              Skriv ut
+            </button>
           </div>
         </div>
 

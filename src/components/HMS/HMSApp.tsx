@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { HMSDashboard } from './HMSDashboard';
 import { IncidentsMain } from './IncidentsMain';
-import { Reports } from './Reports';
+import { UnifiedReports } from './UnifiedReports';
 import { Training } from './Training';
 import { Maintenance } from './Maintenance';
 import { CompanySettings } from './CompanySettings';
@@ -260,7 +260,7 @@ export function HMSApp() {
         return <Evacuation />;
       case 'reports-generate':
       case 'reports-archive':
-        return <Reports />;
+        return <UnifiedReports />;
       case 'control-maintenance':
         return <Maintenance />;
       case 'documents-manager':

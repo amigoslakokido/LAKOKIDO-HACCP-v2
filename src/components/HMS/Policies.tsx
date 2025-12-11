@@ -1,9 +1,63 @@
 import { useState } from 'react';
-import { FileCheck, Shield, Users, AlertTriangle, Leaf, MessageSquare, Building2, CheckCircle2, Edit3, Save, X } from 'lucide-react';
+import { FileCheck, Shield, Users, AlertTriangle, Leaf, MessageSquare, Building2, CheckCircle2, Edit3, Save, X, Download, Printer } from 'lucide-react';
+import { HMSPdfGenerator } from '../../utils/hmsPdfGenerator';
 
 export function Policies() {
   const [activeTab, setActiveTab] = useState<'overview' | 'edit'>('overview');
   const [isEditing, setIsEditing] = useState(false);
+
+  const downloadPDF = () => {
+    const pdf = new HMSPdfGenerator();
+
+    pdf.addHeader({
+      title: 'HMS-Policyer',
+      subtitle: 'Retningslinjer og ansvar',
+      companyName: 'Amigos la Kokido AS',
+      generatedDate: new Date(),
+    });
+
+    pdf.addSectionTitle('HMS-Policy', 'primary');
+    pdf.addText(
+      'Amigos la Kokido AS er forpliktet til å sikre et trygt, sunt og miljøvennlig arbeidsmiljø for alle ansatte, gjester og samarbeidspartnere. Vi skal drive vårt serveringssted i tråd med gjeldende lover og forskrifter, med særlig fokus på helse, miljø og sikkerhet.'
+    );
+    pdf.addSpacing(5);
+
+    pdf.addSectionTitle('Grunnprinsipper', 'success');
+    pdf.addBulletList([
+      'Alle ulykker og arbeidsrelaterte sykdommer kan og skal forebygges',
+      'HMS-arbeid er en integrert del av den daglige driften',
+      'Ledelsen har det overordnede ansvaret for HMS-arbeidet',
+      'Alle ansatte har ansvar for å følge HMS-rutiner og melde fra om avvik',
+      'Åpen kommunikasjon og kontinuerlig forbedring er nøkkelen til suksess',
+    ]);
+    pdf.addSpacing(10);
+
+    pdf.addSectionTitle('Ledelsens Ansvar', 'warning');
+    pdf.addText('Daglig leder har ansvar for:');
+    pdf.addBulletList([
+      'Å sikre at HMS-systemet er etablert, vedlikeholdt og fungerer effektivt',
+      'Å tildele ressurser og tid til HMS-arbeid',
+      'Å gjennomføre årlige HMS-revisjoner',
+      'Å følge opp avvik, ulykker og nestenulykker',
+      'Å sikre at alle ansatte får nødvendig opplæring',
+    ]);
+    pdf.addSpacing(10);
+
+    pdf.addSectionTitle('Ansattes Ansvar', 'info');
+    pdf.addBulletList([
+      'Følge HMS-rutiner og prosedyrer',
+      'Bruke riktig verneutstyr',
+      'Melde fra om risiko, avvik eller farlige situasjoner',
+      'Delta aktivt i HMS-arbeidet',
+      'Ta vare på egen og andres sikkerhet',
+    ]);
+
+    pdf.save('HMS-Policyer-Amigos-la-Kokido.pdf');
+  };
+
+  const handlePrint = () => {
+    window.print();
+  };
 
   return (
     <div className="space-y-6">
@@ -17,6 +71,22 @@ export function Policies() {
               <h1 className="text-2xl font-bold text-slate-900">HMS-Policyer</h1>
               <p className="text-sm text-slate-600">Retningslinjer og ansvar</p>
             </div>
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={downloadPDF}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all font-medium text-sm"
+            >
+              <Download className="w-4 h-4" />
+              Last ned PDF
+            </button>
+            <button
+              onClick={handlePrint}
+              className="flex items-center gap-2 px-4 py-2 bg-slate-600 text-white rounded-lg hover:bg-slate-700 transition-all font-medium text-sm"
+            >
+              <Printer className="w-4 h-4" />
+              Skriv ut
+            </button>
           </div>
         </div>
 
