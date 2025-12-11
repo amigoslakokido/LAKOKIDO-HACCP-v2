@@ -137,9 +137,9 @@ export function UnifiedReports() {
       compliance_score: complianceScore,
       ai_insights: insights,
       recommendations: recommendations,
-      generated_by: 'HMS System',
-      created_by: 'system',
-      status: 'pending',
+      generated_by: 'manual',
+      created_by: null,
+      status: 'final',
     };
 
     const { data: newReport } = await hmsApi.createReport(reportData);
