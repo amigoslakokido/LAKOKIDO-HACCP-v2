@@ -103,7 +103,7 @@ export function HMSDashboard() {
  ).length;
 
  const previousMonthIncidents = incidents.filter(inc =>
- new Date(inc.incident_date).getMonth() === currentMonth1
+ new Date(inc.incident_date).getMonth() === currentMonth - 1
  ).length;
 
  setAnalyticsData({
