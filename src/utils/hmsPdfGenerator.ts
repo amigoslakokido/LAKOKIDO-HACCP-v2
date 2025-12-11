@@ -287,6 +287,34 @@ export class HMSPdfGenerator {
     this.yPos += 5;
   }
 
+  addKeyValue(key: string, value: string) {
+    this.checkPageBreak(8);
+
+    this.doc.setFontSize(10);
+    this.doc.setFont('helvetica', 'bold');
+    this.doc.setTextColor(this.secondaryColor[0], this.secondaryColor[1], this.secondaryColor[2]);
+    this.doc.text(`${key}:`, this.margin, this.yPos);
+
+    this.doc.setFont('helvetica', 'normal');
+    this.doc.setTextColor(0, 0, 0);
+
+    const keyWidth = this.doc.getTextWidth(`${key}: `);
+    const maxWidth = this.pageWidth - 2 * this.margin - keyWidth - 5;
+    const valueLines = this.doc.splitTextToSize(value, maxWidth);
+
+    valueLines.forEach((line: string, index: number) => {
+      if (index === 0) {
+        this.doc.text(line, this.margin + keyWidth + 5, this.yPos);
+      } else {
+        this.checkPageBreak(6);
+        this.yPos += 6;
+        this.doc.text(line, this.margin + keyWidth + 5, this.yPos);
+      }
+    });
+
+    this.yPos += 7;
+  }
+
   addSpacing(height: number = 5) {
     this.yPos += height;
   }

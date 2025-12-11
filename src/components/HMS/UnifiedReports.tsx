@@ -219,7 +219,7 @@ export function UnifiedReports() {
     pdf.addText(report.summary);
     pdf.addSpacing(10);
 
-    pdf.addSectionTitle('Statistikk', 'info');
+    pdf.addSectionTitle('Statistikk', 'primary');
     pdf.addKeyValue('Totalt antall hendelser', report.total_incidents.toString());
     pdf.addKeyValue('Sikkerhetshendelser', report.safety_incidents.toString());
     pdf.addKeyValue('Miljøhendelser', report.environment_incidents.toString());
@@ -241,7 +241,7 @@ export function UnifiedReports() {
     }
 
     if (uploadedImages[report.id]?.length > 0) {
-      pdf.addSectionTitle('Vedlegg - Bilder', 'info');
+      pdf.addSectionTitle('Vedlegg - Bilder', 'primary');
       pdf.addText(`${uploadedImages[report.id].length} bilde(r) vedlagt`);
     }
 
