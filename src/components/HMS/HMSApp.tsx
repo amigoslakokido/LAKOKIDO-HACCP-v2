@@ -20,6 +20,7 @@ import { EnvironmentMain } from './EnvironmentMain';
 import { DocumentsManager } from './DocumentsManager';
 import { AutoReportsGenerator } from '../Settings/AutoReportsGenerator';
 import { UnifiedReports } from './UnifiedReports';
+import { AISettings } from './AISettings';
 import {
   LayoutDashboard,
   AlertTriangle,
@@ -181,6 +182,7 @@ export function HMSApp() {
       name: '⚙️ Innstillinger',
       icon: Wrench,
       items: [
+        { id: 'settings-ai-config', name: 'AI Innstillinger', icon: Brain },
         { id: 'settings-ai', name: 'AI Rapporter', icon: Brain },
         { id: 'settings-reports', name: 'Automatiske rapporter', icon: FileText },
       ]
@@ -244,6 +246,8 @@ export function HMSApp() {
         return <Evacuation />;
       case 'control-maintenance':
         return <Maintenance />;
+      case 'settings-ai-config':
+        return <AISettings />;
       case 'settings-ai':
         return <AutoReportsGenerator />;
       case 'documents-manager':
