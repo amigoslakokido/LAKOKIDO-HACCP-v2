@@ -59,7 +59,7 @@ export function UnifiedReports() {
       ...(manualReports.data || []).map(r => ({ ...r, source: 'manual' as const })),
       ...(aiReports || []).map((r: any) => ({
         id: r.id,
-        report_number: `AI-${r.section_name}-${new Date(r.generated_at).getTime()}`,
+        report_number: `HMS-${r.section_name}-${new Date(r.generated_at).getTime()}`,
         report_type: 'monthly' as const,
         title: r.title,
         summary: r.summary,
@@ -74,7 +74,7 @@ export function UnifiedReports() {
         ai_insights: r.recommendations?.join('\n') || '',
         recommendations: r.recommendations?.join('\n') || '',
         generated_by: r.section_name,
-        created_by: 'ai-system',
+        created_by: 'System',
         status: 'approved',
         created_at: r.generated_at,
         source: 'ai' as const,
@@ -340,7 +340,7 @@ export function UnifiedReports() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold text-slate-900">HMS Rapporter</h2>
-          <p className="text-slate-600">Alle rapporter - manuell og automatisk generert</p>
+          <p className="text-slate-600">Alle genererte HMS rapporter</p>
         </div>
         <button
           onClick={() => setShowCreateForm(true)}

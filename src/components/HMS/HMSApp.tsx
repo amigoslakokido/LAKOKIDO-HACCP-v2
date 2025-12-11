@@ -165,17 +165,7 @@ export function HMSApp() {
       icon: FileStack,
       items: [
         { id: 'documents-manager', name: 'Dokumenter', icon: FileStack },
-      ]
-    },
-    {
-      id: 'compliance',
-      name: '⚖️ Compliance',
-      icon: Scale,
-      items: [
-        { id: 'compliance-laws', name: 'Lovverk', icon: Scale },
-        { id: 'compliance-gdpr', name: 'GDPR', icon: Shield },
-        { id: 'compliance-checklists', name: 'Sjekklister', icon: CheckSquare },
-        { id: 'compliance-certificates', name: 'Godkjenninger', icon: BadgeCheck },
+        { id: 'documents-laws', name: 'Lovverk', icon: Scale },
       ]
     },
     {
@@ -183,10 +173,7 @@ export function HMSApp() {
       name: '📊 Rapporter',
       icon: FileText,
       items: [
-        { id: 'reports-generate', name: 'Generer rapport', icon: FileText },
-        { id: 'reports-archive', name: 'Rapportarkiv', icon: FileStack },
-        { id: 'reports-statistics', name: 'Statistikk', icon: TrendingUp },
-        { id: 'reports-export', name: 'Eksporter', icon: FileCheck },
+        { id: 'reports-generate', name: 'Rapporter', icon: FileText },
       ]
     },
     {
@@ -261,6 +248,8 @@ export function HMSApp() {
         return <Maintenance />;
       case 'documents-manager':
         return <DocumentsManager />;
+      case 'documents-laws':
+        return <PlaceholderView icon={Scale} name="Lovverk" />;
       case 'settings-reports':
         return <AutoReportsGenerator />;
 

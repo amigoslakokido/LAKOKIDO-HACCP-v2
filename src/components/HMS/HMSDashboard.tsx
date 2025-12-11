@@ -224,8 +224,8 @@ export function HMSDashboard() {
             </div>
             <span className="text-3xl font-black text-emerald-900">{stats.avgComplianceScore}%</span>
           </div>
-          <h3 className="text-lg font-bold text-emerald-900 mb-1">Compliance Score</h3>
-          <p className="text-sm text-emerald-700">درجة الامتثال</p>
+          <h3 className="text-lg font-bold text-emerald-900 mb-1">HMS Score</h3>
+          <p className="text-sm text-emerald-700">Samlet vurdering</p>
         </div>
       </div>
 
@@ -413,7 +413,7 @@ export function HMSDashboard() {
       <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl p-8 text-white">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-2xl font-black mb-2">HMS Compliance System</h2>
+            <h2 className="text-2xl font-black mb-2">HMS Internkontroll System</h2>
             <p className="text-blue-100 text-lg">
               نظام متكامل للصحة والبيئة والسلامة وفقاً للوائح النرويجية
             </p>
