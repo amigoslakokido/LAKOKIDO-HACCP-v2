@@ -195,8 +195,8 @@ export function AutoReportsGenerator() {
           compliance_score: reportData.compliance_score || 85,
           ai_insights: '',
           recommendations: reportData.recommendations || '',
-          generated_by: 'Auto-generert',
-          status: 'approved'
+          generated_by: 'automatic',
+          status: 'final'
         }])
         .select()
         .single();
