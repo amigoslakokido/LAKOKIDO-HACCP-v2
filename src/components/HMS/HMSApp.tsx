@@ -19,7 +19,7 @@ import { HMSTraining } from './HMSTraining';
 import { EnvironmentMain } from './EnvironmentMain';
 import { DocumentsManager } from './DocumentsManager';
 import { AutoReportsGenerator } from '../Settings/AutoReportsGenerator';
-import { AllReportsHub } from '../Reports/AllReportsHub';
+import { UnifiedReports } from './UnifiedReports';
 import {
   LayoutDashboard,
   AlertTriangle,
@@ -251,7 +251,7 @@ export function HMSApp() {
       case 'documents-laws':
         return <PlaceholderView icon={Scale} name="Lovverk" />;
       case 'reports-all':
-        return <AllReportsHub />;
+        return <UnifiedReports />;
       case 'settings-reports':
         return <AutoReportsGenerator />;
 
