@@ -4,6 +4,7 @@ import { Settings, Plus, Edit2, Trash2, Save, X, Users, Thermometer, Briefcase, 
 import { NOTIFICATION_SOUNDS, playSound } from '../../utils/notificationSounds';
 import { AdminReportsSection } from './AdminReportsSection';
 import { CompanyModule } from '../Company/CompanyModule';
+import { AutoReportsGenerator } from './AutoReportsGenerator';
 
 interface ScheduledReportConfig {
   id: string;
@@ -40,7 +41,7 @@ interface NotificationSettings {
 }
 
 export function SettingsModule() {
-  const [activeSection, setActiveSection] = useState<'settings' | 'company'>('settings');
+  const [activeSection, setActiveSection] = useState<'settings' | 'company' | 'reports'>('settings');
   const [zones, setZones] = useState<(Zone & { equipment: Equipment[] })[]>([]);
   const [tasks, setTasks] = useState<CleaningTask[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
@@ -902,6 +903,16 @@ export function SettingsModule() {
             Firmainfo
           </button>
           <button
+            onClick={() => setActiveSection('reports')}
+            className={`px-4 py-2 rounded-lg transition-all font-bold text-sm ${
+              activeSection === 'reports'
+                ? 'bg-blue-600 text-white'
+                : 'bg-slate-200 text-slate-700 hover:bg-slate-300'
+            }`}
+          >
+            📄 Rapporter
+          </button>
+          <button
             onClick={() => setIsLocked(true)}
             className="px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-all font-bold text-sm"
           >
@@ -910,7 +921,9 @@ export function SettingsModule() {
         </div>
       </div>
 
-      {activeSection === 'company' ? (
+      {activeSection === 'reports' ? (
+        <AutoReportsGenerator />
+      ) : activeSection === 'company' ? (
         <CompanyModule />
       ) : (
         <>
