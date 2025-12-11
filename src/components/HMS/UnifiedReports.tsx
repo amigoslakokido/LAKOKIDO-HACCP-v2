@@ -392,22 +392,6 @@ export function UnifiedReports() {
           <h2 className="text-2xl font-bold text-slate-900">HMS Rapporter</h2>
           <p className="text-slate-600">Alle genererte HMS rapporter</p>
         </div>
-        <div className="flex gap-3">
-          <button
-            onClick={() => setShowCreateForm(true)}
-            className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-cyan-600 text-white rounded-xl hover:from-blue-700 hover:to-cyan-700 transition-all font-bold shadow-lg"
-          >
-            <Plus className="w-5 h-5" />
-            Ny rapport
-          </button>
-          <button
-            onClick={() => setShowAIForm(true)}
-            className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl hover:from-purple-700 hover:to-pink-700 transition-all font-bold shadow-lg"
-          >
-            <AlertTriangle className="w-5 h-5" />
-            AI Rapport
-          </button>
-        </div>
       </div>
 
       {showAIForm && (
@@ -804,7 +788,7 @@ export function UnifiedReports() {
                 </div>
               )}
 
-              <div className="flex items-center gap-3 pt-4 border-t-2 border-slate-100">
+              <div className="flex items-center gap-2 pt-4 border-t-2 border-slate-100">
                 {editingReport === report.id ? (
                   <>
                     <button
@@ -825,24 +809,24 @@ export function UnifiedReports() {
                   <>
                     <button
                       onClick={() => downloadPDF(report)}
-                      className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all font-bold text-sm"
+                      className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                      title="Last ned PDF"
                     >
-                      <Download className="w-4 h-4" />
-                      Last ned PDF
+                      <Download className="w-5 h-5" />
                     </button>
                     <button
                       onClick={() => startEditing(report)}
-                      className="flex items-center gap-2 px-4 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-all font-bold text-sm"
+                      className="p-2 text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
+                      title="Rediger rapport"
                     >
-                      <Edit3 className="w-4 h-4" />
-                      Rediger
+                      <Edit3 className="w-5 h-5" />
                     </button>
                     <button
                       onClick={() => deleteReport(report.id, report.source)}
-                      className="flex items-center gap-2 px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-all font-bold text-sm ml-auto"
+                      className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors ml-auto"
+                      title="Slett rapport"
                     >
-                      <Trash2 className="w-4 h-4" />
-                      Slett
+                      <Trash2 className="w-5 h-5" />
                     </button>
                   </>
                 )}
