@@ -250,6 +250,27 @@ export const hmsAiApi = {
     }
   },
 
+  async updateReport(id: string, updates: any): Promise<{ data: any; error: any }> {
+    try {
+      const { data, error } = await supabase
+        .from('hms_ai_reports')
+        .update(updates)
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error updating report:', error);
+        return { data: null, error };
+      }
+
+      return { data, error: null };
+    } catch (error) {
+      console.error('Error updating report:', error);
+      return { data: null, error };
+    }
+  },
+
   async deleteReport(id: string): Promise<boolean> {
     try {
       const { error } = await supabase

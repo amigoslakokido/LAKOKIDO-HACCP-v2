@@ -179,6 +179,24 @@ export const hmsApi = {
     return { data, error };
   },
 
+  async updateReport(id: string, report: Partial<HMSReport>) {
+    const { data, error } = await supabase
+      .from('hms_reports')
+      .update(report)
+      .eq('id', id)
+      .select()
+      .single();
+    return { data, error };
+  },
+
+  async deleteReport(id: string) {
+    const { data, error } = await supabase
+      .from('hms_reports')
+      .delete()
+      .eq('id', id);
+    return { data, error };
+  },
+
   // Categories
   async getCategories() {
     const { data, error } = await supabase

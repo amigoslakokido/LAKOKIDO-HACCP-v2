@@ -29,9 +29,11 @@ export function UnifiedReports() {
   const [reports, setReports] = useState<UnifiedReport[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [showAIForm, setShowAIForm] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [editingReport, setEditingReport] = useState<string | null>(null);
   const [uploadedImages, setUploadedImages] = useState<{ [key: string]: string[] }>({});
+  const [selectedSection, setSelectedSection] = useState('incidents');
 
   const [formData, setFormData] = useState({
     report_type: 'monthly' as 'daily' | 'weekly' | 'monthly' | 'quarterly',
@@ -276,9 +278,38 @@ export function UnifiedReports() {
   };
 
   const saveEdit = async (reportId: string) => {
-    setEditingReport(null);
-    alert('Endringene er lagret!');
-    await loadAllReports();
+    const report = reports.find(r => r.id === reportId);
+    if (!report) return;
+
+    const updateData = {
+      title: editData.title,
+      summary: editData.summary,
+      ai_insights: editData.ai_insights,
+      recommendations: editData.recommendations,
+    };
+
+    try {
+      if (report.source === 'ai') {
+        const { error } = await hmsAiApi.updateReport(reportId, updateData);
+        if (error) {
+          alert('Kunne ikke lagre endringer');
+          return;
+        }
+      } else {
+        const { error } = await hmsApi.updateReport(reportId, updateData);
+        if (error) {
+          alert('Kunne ikke lagre endringer');
+          return;
+        }
+      }
+
+      setEditingReport(null);
+      alert('Endringene er lagret!');
+      await loadAllReports();
+    } catch (error) {
+      console.error('Error saving report:', error);
+      alert('Feil ved lagring av rapport');
+    }
   };
 
   const deleteReport = async (reportId: string, source: 'manual' | 'ai' | undefined) => {
@@ -291,6 +322,25 @@ export function UnifiedReports() {
     }
 
     await loadAllReports();
+  };
+
+  const generateAIReport = async () => {
+    setGenerating(true);
+    try {
+      const result = await hmsAiApi.generateReport(selectedSection);
+
+      if (result.success && result.report) {
+        alert('AI-rapport generert!');
+        await loadAllReports();
+        setShowAIForm(false);
+      } else {
+        alert('Kunne ikke generere rapport: ' + (result.error?.message || 'Ukjent feil'));
+      }
+    } catch (error) {
+      console.error('Error generating AI report:', error);
+      alert('Feil ved generering av rapport');
+    }
+    setGenerating(false);
   };
 
   const resetForm = () => {
@@ -342,14 +392,173 @@ export function UnifiedReports() {
           <h2 className="text-2xl font-bold text-slate-900">HMS Rapporter</h2>
           <p className="text-slate-600">Alle genererte HMS rapporter</p>
         </div>
-        <button
-          onClick={() => setShowCreateForm(true)}
-          className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-cyan-600 text-white rounded-xl hover:from-blue-700 hover:to-cyan-700 transition-all font-bold shadow-lg"
-        >
-          <Plus className="w-5 h-5" />
-          Ny rapport
-        </button>
+        <div className="flex gap-3">
+          <button
+            onClick={() => setShowCreateForm(true)}
+            className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-cyan-600 text-white rounded-xl hover:from-blue-700 hover:to-cyan-700 transition-all font-bold shadow-lg"
+          >
+            <Plus className="w-5 h-5" />
+            Ny rapport
+          </button>
+          <button
+            onClick={() => setShowAIForm(true)}
+            className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl hover:from-purple-700 hover:to-pink-700 transition-all font-bold shadow-lg"
+          >
+            <AlertTriangle className="w-5 h-5" />
+            AI Rapport
+          </button>
+        </div>
       </div>
+
+      {showAIForm && (
+        <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-2xl p-6 border-2 border-purple-200 shadow-xl">
+          <h3 className="text-xl font-bold text-slate-900 mb-4">Generer AI-drevet HMS Rapport</h3>
+          <p className="text-slate-600 mb-6">
+            Velg en HMS-seksjon for å generere en detaljert rapport basert på alle registrerte data
+          </p>
+
+          <div className="mb-6">
+            <label className="block text-sm font-bold text-slate-700 mb-3">Velg HMS-seksjon</label>
+            <div className="grid md:grid-cols-2 gap-3">
+              <button
+                onClick={() => setSelectedSection('incidents')}
+                className={`p-4 rounded-xl border-2 text-left transition-all ${
+                  selectedSection === 'incidents'
+                    ? 'border-purple-500 bg-purple-100'
+                    : 'border-slate-300 hover:border-purple-300'
+                }`}
+              >
+                <div className="font-bold text-slate-900">Hendelser og Avvik</div>
+                <div className="text-sm text-slate-600">Analyse av alle registrerte hendelser</div>
+              </button>
+
+              <button
+                onClick={() => setSelectedSection('risk_assessment')}
+                className={`p-4 rounded-xl border-2 text-left transition-all ${
+                  selectedSection === 'risk_assessment'
+                    ? 'border-purple-500 bg-purple-100'
+                    : 'border-slate-300 hover:border-purple-300'
+                }`}
+              >
+                <div className="font-bold text-slate-900">Risikovurdering</div>
+                <div className="text-sm text-slate-600">Oversikt over identifiserte risikoer</div>
+              </button>
+
+              <button
+                onClick={() => setSelectedSection('fire_safety')}
+                className={`p-4 rounded-xl border-2 text-left transition-all ${
+                  selectedSection === 'fire_safety'
+                    ? 'border-purple-500 bg-purple-100'
+                    : 'border-slate-300 hover:border-purple-300'
+                }`}
+              >
+                <div className="font-bold text-slate-900">Brannsikkerhet</div>
+                <div className="text-sm text-slate-600">Brannsikkerhetsutstyr og kontroller</div>
+              </button>
+
+              <button
+                onClick={() => setSelectedSection('first_aid')}
+                className={`p-4 rounded-xl border-2 text-left transition-all ${
+                  selectedSection === 'first_aid'
+                    ? 'border-purple-500 bg-purple-100'
+                    : 'border-slate-300 hover:border-purple-300'
+                }`}
+              >
+                <div className="font-bold text-slate-900">Førstehjelp</div>
+                <div className="text-sm text-slate-600">Førstehjelpsansvarlige og utstyr</div>
+              </button>
+
+              <button
+                onClick={() => setSelectedSection('evacuation')}
+                className={`p-4 rounded-xl border-2 text-left transition-all ${
+                  selectedSection === 'evacuation'
+                    ? 'border-purple-500 bg-purple-100'
+                    : 'border-slate-300 hover:border-purple-300'
+                }`}
+              >
+                <div className="font-bold text-slate-900">Evakuering</div>
+                <div className="text-sm text-slate-600">Evakueringsplan og øvelser</div>
+              </button>
+
+              <button
+                onClick={() => setSelectedSection('training')}
+                className={`p-4 rounded-xl border-2 text-left transition-all ${
+                  selectedSection === 'training'
+                    ? 'border-purple-500 bg-purple-100'
+                    : 'border-slate-300 hover:border-purple-300'
+                }`}
+              >
+                <div className="font-bold text-slate-900">Opplæring</div>
+                <div className="text-sm text-slate-600">Opplæringssessjoner og sertifikater</div>
+              </button>
+
+              <button
+                onClick={() => setSelectedSection('work_environment')}
+                className={`p-4 rounded-xl border-2 text-left transition-all ${
+                  selectedSection === 'work_environment'
+                    ? 'border-purple-500 bg-purple-100'
+                    : 'border-slate-300 hover:border-purple-300'
+                }`}
+              >
+                <div className="font-bold text-slate-900">Arbeidsmiljø</div>
+                <div className="text-sm text-slate-600">Arbeidsmiljøvurderinger</div>
+              </button>
+
+              <button
+                onClick={() => setSelectedSection('environment')}
+                className={`p-4 rounded-xl border-2 text-left transition-all ${
+                  selectedSection === 'environment'
+                    ? 'border-purple-500 bg-purple-100'
+                    : 'border-slate-300 hover:border-purple-300'
+                }`}
+              >
+                <div className="font-bold text-slate-900">Miljø</div>
+                <div className="text-sm text-slate-600">Miljømål og avfallshåndtering</div>
+              </button>
+
+              <button
+                onClick={() => setSelectedSection('personnel')}
+                className={`p-4 rounded-xl border-2 text-left transition-all ${
+                  selectedSection === 'personnel'
+                    ? 'border-purple-500 bg-purple-100'
+                    : 'border-slate-300 hover:border-purple-300'
+                }`}
+              >
+                <div className="font-bold text-slate-900">Personell</div>
+                <div className="text-sm text-slate-600">Ansatte og verneombud</div>
+              </button>
+
+              <button
+                onClick={() => setSelectedSection('documents')}
+                className={`p-4 rounded-xl border-2 text-left transition-all ${
+                  selectedSection === 'documents'
+                    ? 'border-purple-500 bg-purple-100'
+                    : 'border-slate-300 hover:border-purple-300'
+                }`}
+              >
+                <div className="font-bold text-slate-900">Dokumenter</div>
+                <div className="text-sm text-slate-600">HMS-dokumentasjon</div>
+              </button>
+            </div>
+          </div>
+
+          <div className="flex gap-4">
+            <button
+              onClick={generateAIReport}
+              disabled={generating}
+              className="flex-1 px-6 py-4 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl hover:from-purple-700 hover:to-pink-700 transition-all font-bold disabled:opacity-50 shadow-lg"
+            >
+              {generating ? 'Genererer AI-rapport...' : 'Generer AI-rapport'}
+            </button>
+            <button
+              onClick={() => setShowAIForm(false)}
+              className="px-6 py-4 bg-slate-200 text-slate-700 rounded-xl hover:bg-slate-300 transition-all font-bold"
+            >
+              Avbryt
+            </button>
+          </div>
+        </div>
+      )}
 
       {showCreateForm && (
         <div className="bg-white rounded-2xl p-6 border-2 border-blue-200 shadow-xl">
