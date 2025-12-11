@@ -196,7 +196,6 @@ export function AutoReportsGenerator() {
           ai_insights: '',
           recommendations: reportData.recommendations || '',
           generated_by: 'Auto-generert',
-          created_by: 'system',
           status: 'approved'
         }])
         .select()
