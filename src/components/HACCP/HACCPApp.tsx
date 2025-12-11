@@ -4,7 +4,7 @@ import { CompactDailyRoutine } from '../RoutineTasks/CompactDailyRoutine';
 import RoutineReportsList from '../RoutineTasks/RoutineReportsList';
 import { TemperatureControl } from '../Temperature/TemperatureControl';
 import { CleaningTasks } from '../Cleaning/CleaningTasks';
-import { UnifiedReports } from '../Reports/UnifiedReports';
+import { AllReportsHub } from '../Reports/AllReportsHub';
 import { SettingsModule } from '../Settings/SettingsModule';
 import { CriticalIncidents } from '../Incidents/CriticalIncidents';
 import { Home, ClipboardCheck, Thermometer, Sparkles, FileText, Settings, Menu, X, AlertTriangle, FileBarChart } from 'lucide-react';
@@ -60,7 +60,7 @@ export function HACCPApp() {
       case 'cleaning':
         return <CleaningTasks />;
       case 'reports':
-        return <UnifiedReports />;
+        return <AllReportsHub />;
       case 'incidents':
         return <CriticalIncidents />;
       case 'settings':

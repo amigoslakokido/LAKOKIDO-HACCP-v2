@@ -19,6 +19,7 @@ import { HMSTraining } from './HMSTraining';
 import { EnvironmentMain } from './EnvironmentMain';
 import { DocumentsManager } from './DocumentsManager';
 import { AutoReportsGenerator } from '../Settings/AutoReportsGenerator';
+import { AllReportsHub } from '../Reports/AllReportsHub';
 import {
   LayoutDashboard,
   AlertTriangle,
@@ -168,6 +169,14 @@ export function HMSApp() {
       ]
     },
     {
+      id: 'reports',
+      name: '📊 Rapporter',
+      icon: FileText,
+      items: [
+        { id: 'reports-all', name: 'Alle Rapporter', icon: FileText },
+      ]
+    },
+    {
       id: 'settings',
       name: '⚙️ Innstillinger',
       icon: Wrench,
@@ -241,6 +250,8 @@ export function HMSApp() {
         return <DocumentsManager />;
       case 'documents-laws':
         return <PlaceholderView icon={Scale} name="Lovverk" />;
+      case 'reports-all':
+        return <AllReportsHub />;
       case 'settings-reports':
         return <AutoReportsGenerator />;
 
