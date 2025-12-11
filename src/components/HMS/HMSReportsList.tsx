@@ -79,34 +79,62 @@ export function HMSReportsList() {
 
   const downloadPDF = async (report: HMSReport) => {
     try {
-      // جلب البيانات التفصيلية
-      const { data: incidents } = await hmsApi.getIncidents();
-      const { data: training } = await hmsApi.getTrainingSessions();
-      const riskAssessments = await hmsApi.getRiskAssessments();
+      // جلب البيانات التفصيلية بشكل آمن
+      let incidents: any[] = [];
+      let training: any[] = [];
+      let riskAssessments: any[] = [];
+
+      try {
+        const incidentsResult = await hmsApi.getIncidents();
+        incidents = incidentsResult?.data || [];
+      } catch (err) {
+        console.warn('Could not fetch incidents:', err);
+      }
+
+      try {
+        const trainingResult = await hmsApi.getTrainingSessions();
+        training = trainingResult?.data || [];
+      } catch (err) {
+        console.warn('Could not fetch training:', err);
+      }
+
+      try {
+        riskAssessments = await hmsApi.getRiskAssessments() || [];
+      } catch (err) {
+        console.warn('Could not fetch risk assessments:', err);
+      }
 
       const startDate = new Date(report.start_date);
       const endDate = new Date(report.end_date);
 
-      const filteredIncidents = incidents?.filter(inc => {
-        const incDate = new Date(inc.incident_date);
-        return incDate >= startDate && incDate <= endDate;
-      }) || [];
+      const filteredIncidents = incidents.filter(inc => {
+        try {
+          const incDate = new Date(inc.incident_date);
+          return incDate >= startDate && incDate <= endDate;
+        } catch {
+          return false;
+        }
+      });
 
-      const filteredTraining = training?.filter(t => {
-        const tDate = new Date(t.scheduled_date);
-        return tDate >= startDate && tDate <= endDate;
-      }) || [];
+      const filteredTraining = training.filter(t => {
+        try {
+          const tDate = new Date(t.scheduled_date);
+          return tDate >= startDate && tDate <= endDate;
+        } catch {
+          return false;
+        }
+      });
 
       const details = {
         incidents: filteredIncidents,
         training: filteredTraining,
-        riskAssessments: riskAssessments || [],
+        riskAssessments: riskAssessments,
       };
 
       await generateHMSReportPDF(report, details);
     } catch (error) {
       console.error('Error generating PDF:', error);
-      alert('Feil ved generering av PDF');
+      alert('Feil ved generering av PDF: ' + (error as Error).message);
     }
   };
 

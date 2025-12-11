@@ -96,7 +96,7 @@ export function HACCPDashboard() {
         supabase.from('cleaning_tasks').select('*', { count: 'exact', head: true }).eq('active', true),
         supabase.from('hygiene_checks').select('*').eq('check_date', today),
         supabase.from('critical_incidents').select('*').eq('status', 'open'),
-        supabase.from('routine_task_completions').select('*').eq('completion_date', today)
+        supabase.from('routine_task_logs').select('*').eq('completed_date', today)
       ]);
 
       const avgTemp = tempLogs?.length
