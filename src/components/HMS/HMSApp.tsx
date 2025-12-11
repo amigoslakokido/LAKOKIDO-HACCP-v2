@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { HMSDashboard } from './HMSDashboard';
 import { IncidentsMain } from './IncidentsMain';
-import { UnifiedReports } from './UnifiedReports';
 import { Training } from './Training';
 import { Maintenance } from './Maintenance';
 import { CompanySettings } from './CompanySettings';
@@ -169,18 +168,11 @@ export function HMSApp() {
       ]
     },
     {
-      id: 'reports',
-      name: '📊 Rapporter',
-      icon: FileText,
-      items: [
-        { id: 'reports-generate', name: 'Rapporter', icon: FileText },
-      ]
-    },
-    {
       id: 'settings',
       name: '⚙️ Innstillinger',
       icon: Wrench,
       items: [
+        { id: 'settings-ai', name: 'AI Rapporter', icon: Brain },
         { id: 'settings-reports', name: 'Automatiske rapporter', icon: FileText },
       ]
     },
@@ -241,11 +233,10 @@ export function HMSApp() {
         return <FireSafety />;
       case 'emergency-evacuation':
         return <Evacuation />;
-      case 'reports-generate':
-      case 'reports-archive':
-        return <UnifiedReports />;
       case 'control-maintenance':
         return <Maintenance />;
+      case 'settings-ai':
+        return <AutoReportsGenerator />;
       case 'documents-manager':
         return <DocumentsManager />;
       case 'documents-laws':

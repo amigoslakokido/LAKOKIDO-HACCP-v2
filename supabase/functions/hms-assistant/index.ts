@@ -1,10 +1,15 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import { createClient } from 'npm:@supabase/supabase-js@2';
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Client-Info, Apikey",
 };
+
+const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
+const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
+const SUPABASE_SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
@@ -16,44 +21,17 @@ Deno.serve(async (req: Request) => {
 
   try {
     const url = new URL(req.url);
-    const section = url.pathname.split('/').pop();
+    const action = url.searchParams.get('action') || 'assist';
+    const section = url.searchParams.get('section');
     const body = await req.json();
 
     let response;
 
-    switch (section) {
-      case 'brann':
-        response = await handleBrannAssistant(body);
-        break;
-      case 'forstehjelp':
-        response = await handleForstehjelpAssistant(body);
-        break;
-      case 'risikoanalyse':
-        response = await handleRisikoanalyseAssistant(body);
-        break;
-      case 'arbeidsmiljo':
-        response = await handleArbeidsmiljoAssistant(body);
-        break;
-      case 'hendelser':
-        response = await handleHendelserAssistant(body);
-        break;
-      case 'avvik':
-        response = await handleAvvikAssistant(body);
-        break;
-      case 'opplaering':
-        response = await handleOpplaeringAssistant(body);
-        break;
-      case 'dokumenter':
-        response = await handleDokumenterAssistant(body);
-        break;
-      case 'rapport':
-        response = await handleRapportAssistant(body);
-        break;
-      case 'miljo':
-        response = await handleMiljoAssistant(body);
-        break;
-      default:
-        response = await handleGeneralAssistant(body);
+    if (action === 'generate-report' && section) {
+      response = await generateSectionReport(section, body);
+    } else {
+      const sectionPath = url.pathname.split('/').pop();
+      response = await handleAssistant(sectionPath || section, body);
     }
 
     return new Response(
@@ -78,6 +56,206 @@ Deno.serve(async (req: Request) => {
     );
   }
 });
+
+async function generateSectionReport(sectionCode: string, data: any) {
+  const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
+
+  const { data: knowledgeBase, error: kbError } = await supabase
+    .from('hms_ai_knowledge_base')
+    .select('*')
+    .eq('section_code', sectionCode)
+    .maybeSingle();
+
+  if (kbError || !knowledgeBase) {
+    return {
+      success: false,
+      error: 'Knowledge base not found for section: ' + sectionCode
+    };
+  }
+
+  const sectionData: any = {};
+  for (const table of knowledgeBase.related_tables) {
+    const { data: tableData } = await supabase
+      .from(table)
+      .select('*')
+      .limit(100);
+
+    if (tableData) {
+      sectionData[table] = tableData;
+    }
+  }
+
+  let aiReport;
+  if (OPENAI_API_KEY) {
+    aiReport = await generateWithChatGPT(knowledgeBase, sectionData, data);
+  } else {
+    aiReport = await generateFallbackReport(knowledgeBase, sectionData, data);
+  }
+
+  return {
+    success: true,
+    report: aiReport,
+    section: knowledgeBase.section_name_no,
+    generatedAt: new Date().toISOString()
+  };
+}
+
+async function generateWithChatGPT(knowledgeBase: any, sectionData: any, additionalContext: any) {
+  const prompt = `
+Du er en profesjonell HMS-rådgiver som lager detaljerte rapporter på norsk.
+
+SEKSJON: ${knowledgeBase.section_name_no} (${knowledgeBase.section_name_en})
+BESKRIVELSE: ${knowledgeBase.description}
+RETNINGSLINJER: ${knowledgeBase.analysis_guidelines}
+
+DATA FRA SYSTEMET:
+${JSON.stringify(sectionData, null, 2)}
+
+TILLEGGSKONTEKST:
+${JSON.stringify(additionalContext, null, 2)}
+
+Lag en profesjonell HMS-rapport som inkluderer:
+
+1. **Sammendrag** (2-3 avsnitt)
+   - Overordnet vurdering av situasjonen
+   - Viktigste funn
+
+2. **Detaljert analyse**
+   - Analyse av data fra tabellene
+   - Identifiser trender og mønstre
+   - Vurder compliance med forskrifter: ${knowledgeBase.regulations?.join(', ')}
+
+3. **Statistikk og nøkkeltall**
+   - Presenter relevante tall og statistikk
+   - Sammenlign med beste praksis
+
+4. **Identifiserte risikoer og utfordringer**
+   - List opp potensielle problemer
+   - Vurder alvorlighetsgrad
+
+5. **Anbefalinger og tiltak**
+   - Konkrete, handlingsrettede anbefalinger
+   - Prioriter etter viktighet
+   - Foreslå tidslinje
+
+6. **Konklusjon**
+   - Oppsummering
+   - Neste steg
+
+Rapporten skal være profesjonell, grundig og bruke norsk terminologi.
+Alle setninger skal være komplette og profesjonelt formulert.
+`;
+
+  try {
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${OPENAI_API_KEY}`,
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [
+          {
+            role: 'system',
+            content: 'Du er en profesjonell HMS-rådgiver med dyp kunnskap om norsk arbeidsmiljølov og HMS-forskrifter. Du lager detaljerte, profesjonelle rapporter på norsk.'
+          },
+          {
+            role: 'user',
+            content: prompt
+          }
+        ],
+        temperature: 0.7,
+        max_tokens: 4000,
+      }),
+    });
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      throw new Error(result.error?.message || 'OpenAI API error');
+    }
+
+    return {
+      content: result.choices[0].message.content,
+      source: 'chatgpt',
+      model: 'gpt-4o-mini'
+    };
+  } catch (error) {
+    console.error('ChatGPT error:', error);
+    return await generateFallbackReport(knowledgeBase, sectionData, additionalContext);
+  }
+}
+
+async function generateFallbackReport(knowledgeBase: any, sectionData: any, additionalContext: any) {
+  const dataCount = Object.values(sectionData).reduce((acc: number, data: any) => acc + (data?.length || 0), 0);
+
+  let summary = `# ${knowledgeBase.section_name_no} - Rapport\n\n`;
+  summary += `## Sammendrag\n\n`;
+  summary += `Denne rapporten gir en oversikt over ${knowledgeBase.section_name_no.toLowerCase()} i virksomheten. `;
+  summary += `Totalt ${dataCount} registreringer er analysert fra ${knowledgeBase.related_tables.length} ulike tabeller.\n\n`;
+
+  summary += `## Datagrunnlag\n\n`;
+  for (const [table, data] of Object.entries(sectionData)) {
+    const records = data as any[];
+    summary += `- **${table}**: ${records.length} registreringer\n`;
+  }
+
+  summary += `\n## Analyseguide\n\n${knowledgeBase.analysis_guidelines}\n\n`;
+
+  if (knowledgeBase.regulations && knowledgeBase.regulations.length > 0) {
+    summary += `## Relevante forskrifter\n\n`;
+    for (const reg of knowledgeBase.regulations) {
+      summary += `- ${reg}\n`;
+    }
+    summary += '\n';
+  }
+
+  summary += `## Anbefalinger\n\n`;
+  summary += `1. Oppretthold systematisk registrering av data\n`;
+  summary += `2. Gjennomgå og oppdater rutiner regelmessig\n`;
+  summary += `3. Sørg for at alle ansatte er kjent med prosedyrene\n`;
+  summary += `4. Dokumenter alle avvik og tiltak\n\n`;
+
+  summary += `## Konklusjon\n\n`;
+  summary += `Basert på tilgjengelig data viser systemet ${dataCount} registreringer for ${knowledgeBase.section_name_no.toLowerCase()}. `;
+  summary += `For mer detaljert analyse, vennligst konfigurer OpenAI API-nøkkel i systeminnstillingene.\n\n`;
+
+  summary += `*Rapport generert: ${new Date().toLocaleString('nb-NO')}*\n`;
+
+  return {
+    content: summary,
+    source: 'fallback',
+    model: 'rule-based'
+  };
+}
+
+async function handleAssistant(section: string | null, data: any) {
+  switch (section) {
+    case 'brann':
+      return handleBrannAssistant(data);
+    case 'forstehjelp':
+      return handleForstehjelpAssistant(data);
+    case 'risikoanalyse':
+      return handleRisikoanalyseAssistant(data);
+    case 'arbeidsmiljo':
+      return handleArbeidsmiljoAssistant(data);
+    case 'hendelser':
+      return handleHendelserAssistant(data);
+    case 'avvik':
+      return handleAvvikAssistant(data);
+    case 'opplaering':
+      return handleOpplaeringAssistant(data);
+    case 'dokumenter':
+      return handleDokumenterAssistant(data);
+    case 'rapport':
+      return handleRapportAssistant(data);
+    case 'miljo':
+      return handleMiljoAssistant(data);
+    default:
+      return handleGeneralAssistant(data);
+  }
+}
 
 function handleBrannAssistant(data: any) {
   const forslag = [];
