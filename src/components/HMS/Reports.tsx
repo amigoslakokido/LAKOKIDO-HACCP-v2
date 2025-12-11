@@ -249,7 +249,7 @@ export function Reports() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="text-slate-600">جاري التحميل... Laster rapporter...</div>
+        <div className="text-slate-600">Laster rapporter...</div>
       </div>
     );
   }
@@ -259,7 +259,7 @@ export function Reports() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold text-slate-900">HMS Rapporter</h2>
-          <p className="text-slate-600">التقارير الرسمية</p>
+          <p className="text-slate-600">Official Reports</p>
         </div>
         <button
           onClick={() => setShowCreateForm(true)}
@@ -354,7 +354,7 @@ export function Reports() {
           <div className="text-center py-12 bg-slate-50 rounded-2xl">
             <FileText className="w-16 h-16 text-slate-400 mx-auto mb-4" />
             <p className="text-slate-600 text-lg">Ingen rapporter ennå</p>
-            <p className="text-slate-500">لا توجد تقارير بعد</p>
+            <p className="text-slate-500">No reports yet</p>
           </div>
         ) : (
           reports.map((report) => (

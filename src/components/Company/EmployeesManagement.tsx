@@ -101,7 +101,7 @@ export function EmployeesManagement() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="text-slate-600">جاري التحميل... Laster...</div>
+        <div className="text-slate-600">Laster...</div>
       </div>
     );
   }
@@ -110,7 +110,7 @@ export function EmployeesManagement() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-slate-900">قائمة الموظفين - Ansatte</h2>
+          <h2 className="text-2xl font-bold text-slate-900">Ansatte</h2>
           <p className="text-slate-600">Administrer medarbeidere</p>
         </div>
         <div className="flex gap-3">
@@ -154,7 +154,7 @@ export function EmployeesManagement() {
               <div className="grid md:grid-cols-2 gap-4">
                 <div className="md:col-span-2">
                   <label className="block text-sm font-bold text-slate-700 mb-2">
-                    الاسم - Navn *
+                    Navn *
                   </label>
                   <input
                     type="text"
@@ -167,7 +167,7 @@ export function EmployeesManagement() {
 
                 <div>
                   <label className="block text-sm font-bold text-slate-700 mb-2">
-                    الهاتف - Telefon
+                    Telefon
                   </label>
                   <input
                     type="text"
@@ -179,7 +179,7 @@ export function EmployeesManagement() {
 
                 <div>
                   <label className="block text-sm font-bold text-slate-700 mb-2">
-                    البريد - E-post
+                    E-post
                   </label>
                   <input
                     type="email"
@@ -191,7 +191,7 @@ export function EmployeesManagement() {
 
                 <div>
                   <label className="block text-sm font-bold text-slate-700 mb-2">
-                    الوظيفة - Stilling (Norsk) *
+                    Stilling (Norsk) *
                   </label>
                   <input
                     type="text"
@@ -205,20 +205,20 @@ export function EmployeesManagement() {
 
                 <div>
                   <label className="block text-sm font-bold text-slate-700 mb-2">
-                    الوظيفة - Stilling (Arabisk)
+                    Stilling (English)
                   </label>
                   <input
                     type="text"
                     value={formData.position_ar}
                     onChange={(e) => setFormData({ ...formData, position_ar: e.target.value })}
                     className="w-full px-4 py-3 border-2 border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500"
-                    placeholder="طباخ، نادل، إلخ"
+                    placeholder="Cook, Waiter, etc."
                   />
                 </div>
 
                 <div>
                   <label className="block text-sm font-bold text-slate-700 mb-2">
-                    القسم - Avdeling
+                    Avdeling
                   </label>
                   <select
                     value={formData.department_id}
@@ -236,7 +236,7 @@ export function EmployeesManagement() {
 
                 <div>
                   <label className="block text-sm font-bold text-slate-700 mb-2">
-                    تاريخ التوظيف - Ansettelsesdato
+                    Ansettelsesdato
                   </label>
                   <input
                     type="date"
@@ -248,7 +248,7 @@ export function EmployeesManagement() {
 
                 <div className="md:col-span-2">
                   <label className="block text-sm font-bold text-slate-700 mb-2">
-                    ملاحظات - Notater
+                    Notater
                   </label>
                   <textarea
                     value={formData.notes}
@@ -286,7 +286,7 @@ export function EmployeesManagement() {
           <div className="text-center py-12 bg-slate-50 rounded-2xl">
             <Users className="w-16 h-16 text-slate-400 mx-auto mb-4" />
             <p className="text-slate-600 text-lg">Ingen ansatte registrert</p>
-            <p className="text-slate-500">لا يوجد موظفون مسجلون</p>
+            <p className="text-slate-500">No employees registered</p>
           </div>
         ) : (
           employees.map((employee: any) => (

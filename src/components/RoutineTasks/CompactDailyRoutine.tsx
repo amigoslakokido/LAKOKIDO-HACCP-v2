@@ -61,7 +61,7 @@ export function CompactDailyRoutine({ language: propLanguage }: CompactDailyRout
 
   const handleTaskComplete = async (status: 'completed' | 'not_completed') => {
     if (!selectedEmployee) {
-      alert(language === 'ar' ? 'اختر موظف' : 'Velg ansatt');
+      alert(language === 'ar' ? 'Choose employee' : 'Velg ansatt');
       return;
     }
 
@@ -91,7 +91,7 @@ export function CompactDailyRoutine({ language: propLanguage }: CompactDailyRout
       }
     } catch (error) {
       console.error('Error:', error);
-      alert('Feil / خطأ');
+      alert('Feil / Error');
     }
   };
 
@@ -117,7 +117,7 @@ export function CompactDailyRoutine({ language: propLanguage }: CompactDailyRout
       <div className="bg-white rounded-lg p-3 shadow-md">
         <div className="flex items-center justify-between mb-2">
           <span className="text-sm font-semibold text-gray-700">
-            {language === 'ar' ? 'التقدم' : 'Fremdrift'}
+            {language === 'ar' ? 'Progress' : 'Fremdrift'}
           </span>
           <span className="text-sm font-bold text-blue-600">
             {completedToday.size}/{tasks.length} ({progress}%)
@@ -146,7 +146,7 @@ export function CompactDailyRoutine({ language: propLanguage }: CompactDailyRout
           <div className="text-center">
             <p className="text-sm font-bold text-gray-700">
               {language === 'ar'
-                ? `المهمة ${currentTaskIndex + 1} من ${tasks.length}`
+                ? `Task ${currentTaskIndex + 1} of ${tasks.length}`
                 : `Oppgave ${currentTaskIndex + 1} av ${tasks.length}`}
             </p>
           </div>
@@ -176,7 +176,7 @@ export function CompactDailyRoutine({ language: propLanguage }: CompactDailyRout
           {completedToday.has(currentTask.id) && (
             <div className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-50 text-emerald-700 rounded-xl text-sm font-bold border-2 border-emerald-300 animate-pulse">
               <CheckCircle2 className="w-4 h-4 animate-spin-slow" />
-              {language === 'ar' ? 'تم الإنجاز' : 'Fullført'}
+              {language === 'ar' ? 'Completed' : 'Fullført'}
             </div>
           )}
         </div>
@@ -187,14 +187,14 @@ export function CompactDailyRoutine({ language: propLanguage }: CompactDailyRout
             <div className="bg-white rounded-lg p-3 shadow-sm">
               <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
                 <User className="w-4 h-4 text-blue-600 animate-pulse" />
-                {language === 'ar' ? 'من سيقوم بالمهمة؟' : 'Hvem utfører?'}
+                {language === 'ar' ? 'Who performs?' : 'Hvem utfører?'}
               </label>
               <select
                 value={selectedEmployee}
                 onChange={(e) => setSelectedEmployee(e.target.value)}
                 className="w-full px-3 py-2 text-sm font-medium border-2 border-blue-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all bg-white"
               >
-                <option value="">{language === 'ar' ? 'اختر...' : 'Velg...'}</option>
+                <option value="">{language === 'ar' ? 'Choose...' : 'Velg...'}</option>
                 {employees.map((emp) => (
                   <option key={emp.id} value={emp.id}>{emp.name}</option>
                 ))}
@@ -204,14 +204,14 @@ export function CompactDailyRoutine({ language: propLanguage }: CompactDailyRout
             <div className="bg-white rounded-lg p-3 shadow-sm">
               <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
                 <MessageSquare className="w-4 h-4 text-amber-600 animate-pulse" />
-                {language === 'ar' ? 'ملاحظات (اختياري)' : 'Notater (valgfritt)'}
+                {language === 'ar' ? 'Notes (optional)' : 'Notater (valgfritt)'}
               </label>
               <textarea
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 rows={2}
                 className="w-full px-3 py-2 text-sm border-2 border-amber-200 rounded-lg focus:ring-2 focus:ring-amber-500 transition-all"
-                placeholder={language === 'ar' ? 'أضف ملاحظة...' : 'Legg til notat...'}
+                placeholder={language === 'ar' ? 'Add note...' : 'Legg til notat...'}
               />
             </div>
 
@@ -222,7 +222,7 @@ export function CompactDailyRoutine({ language: propLanguage }: CompactDailyRout
                 className="flex-1 px-4 py-3 bg-gradient-to-r from-emerald-500 to-teal-600 text-white text-base font-bold rounded-lg hover:shadow-lg disabled:opacity-50 transition-all transform hover:scale-105 flex items-center justify-center gap-2 group"
               >
                 <CheckCircle2 className="w-5 h-5 group-hover:animate-spin-slow" />
-                <span>{language === 'ar' ? 'تم ✅' : 'Fullført ✅'}</span>
+                <span>{language === 'ar' ? 'Done ✅' : 'Fullført ✅'}</span>
               </button>
 
               <button
@@ -231,7 +231,7 @@ export function CompactDailyRoutine({ language: propLanguage }: CompactDailyRout
                 className="flex-1 px-4 py-3 bg-gradient-to-r from-red-500 to-pink-600 text-white text-base font-bold rounded-lg hover:shadow-lg disabled:opacity-50 transition-all transform hover:scale-105 flex items-center justify-center gap-2 group"
               >
                 <XCircle className="w-5 h-5 group-hover:animate-pulse" />
-                <span>{language === 'ar' ? 'لم يتم ❌' : 'Ikke fullført ❌'}</span>
+                <span>{language === 'ar' ? 'Not done ❌' : 'Ikke fullført ❌'}</span>
               </button>
             </div>
           </div>

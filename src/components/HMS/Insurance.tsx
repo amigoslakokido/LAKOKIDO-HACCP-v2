@@ -134,7 +134,7 @@ export function Insurance() {
             </div>
             <div>
               <h1 className="text-2xl font-bold text-slate-900">Forsikringer</h1>
-              <p className="text-sm text-slate-600">شركات التأمين - Administrer forsikringsselskaper</p>
+              <p className="text-sm text-slate-600">Administrer forsikringsselskaper</p>
             </div>
           </div>
           <button

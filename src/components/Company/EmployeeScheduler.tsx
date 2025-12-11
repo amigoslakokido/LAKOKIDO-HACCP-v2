@@ -20,13 +20,13 @@ interface Schedule {
 }
 
 const DAYS = [
-  { value: 0, label: 'الأحد', labelNo: 'Søndag' },
-  { value: 1, label: 'الإثنين', labelNo: 'Mandag' },
-  { value: 2, label: 'الثلاثاء', labelNo: 'Tirsdag' },
-  { value: 3, label: 'الأربعاء', labelNo: 'Onsdag' },
-  { value: 4, label: 'الخميس', labelNo: 'Torsdag' },
-  { value: 5, label: 'الجمعة', labelNo: 'Fredag' },
-  { value: 6, label: 'السبت', labelNo: 'Lørdag' }
+  { value: 0, label: 'Sunday', labelNo: 'Søndag' },
+  { value: 1, label: 'Monday', labelNo: 'Mandag' },
+  { value: 2, label: 'Tuesday', labelNo: 'Tirsdag' },
+  { value: 3, label: 'Wednesday', labelNo: 'Onsdag' },
+  { value: 4, label: 'Thursday', labelNo: 'Torsdag' },
+  { value: 5, label: 'Friday', labelNo: 'Fredag' },
+  { value: 6, label: 'Saturday', labelNo: 'Lørdag' }
 ];
 
 export function EmployeeScheduler() {

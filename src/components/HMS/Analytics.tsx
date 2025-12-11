@@ -96,7 +96,7 @@ export function Analytics() {
   if (loading || !analyticsData) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="text-slate-600">جاري التحميل... Laster analyser...</div>
+        <div className="text-slate-600">Laster analyser...</div>
       </div>
     );
   }
@@ -145,7 +145,7 @@ export function Analytics() {
     <div className="space-y-6">
       <div>
         <h2 className="text-2xl font-bold text-slate-900">Analyser og Innsikt</h2>
-        <p className="text-slate-600">التحليلات والرؤى الذكية</p>
+        <p className="text-slate-600">Analytics and Insights</p>
       </div>
 
       <div className="grid md:grid-cols-3 gap-6">
@@ -154,7 +154,7 @@ export function Analytics() {
             <Activity className="w-8 h-8 text-purple-600" />
             <div>
               <h3 className="text-lg font-bold text-purple-900">Ukentlig trend</h3>
-              <p className="text-sm text-purple-700">الاتجاه الأسبوعي</p>
+              <p className="text-sm text-purple-700">Weekly Trend</p>
             </div>
           </div>
           <div className="text-3xl font-black text-purple-900">
@@ -168,7 +168,7 @@ export function Analytics() {
             <TrendingUp className={`w-8 h-8 ${trend > 0 ? 'text-red-600' : 'text-emerald-600'}`} />
             <div>
               <h3 className={`text-lg font-bold ${trend > 0 ? 'text-red-900' : 'text-emerald-900'}`}>Månedlig endring</h3>
-              <p className={`text-sm ${trend > 0 ? 'text-red-700' : 'text-emerald-700'}`}>التغيير الشهري</p>
+              <p className={`text-sm ${trend > 0 ? 'text-red-700' : 'text-emerald-700'}`}>Monthly Change</p>
             </div>
           </div>
           <div className={`text-3xl font-black ${trend > 0 ? 'text-red-900' : 'text-emerald-900'}`}>
@@ -184,7 +184,7 @@ export function Analytics() {
             <CheckCircle className="w-8 h-8 text-blue-600" />
             <div>
               <h3 className="text-lg font-bold text-blue-900">Løste saker</h3>
-              <p className="text-sm text-blue-700">القضايا المحلولة</p>
+              <p className="text-sm text-blue-700">Resolved Cases</p>
             </div>
           </div>
           <div className="text-3xl font-black text-blue-900">
@@ -253,7 +253,7 @@ export function Analytics() {
           <AlertTriangle className="w-12 h-12" />
           <div>
             <h3 className="text-2xl font-black">Smart Innsikt</h3>
-            <p className="text-purple-100">الرؤى الذكية من الذكاء الاصطناعي</p>
+            <p className="text-purple-100">Smart Insights from AI</p>
           </div>
         </div>
         <div className="space-y-4">

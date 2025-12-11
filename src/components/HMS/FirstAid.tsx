@@ -245,7 +245,7 @@ export function FirstAid() {
             </div>
             <div>
               <h1 className="text-2xl font-bold text-slate-900">Førstehjelp</h1>
-              <p className="text-sm text-slate-600">الإسعافات الأولية - First Aid Management</p>
+              <p className="text-sm text-slate-600">First Aid Management</p>
             </div>
           </div>
           <button

@@ -65,7 +65,7 @@ export function Training() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="text-slate-600">جاري التحميل... Laster opplæring...</div>
+        <div className="text-slate-600">Laster opplæring...</div>
       </div>
     );
   }
@@ -75,7 +75,7 @@ export function Training() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold text-slate-900">Sikkerhetstrening</h2>
-          <p className="text-slate-600">التدريب على السلامة</p>
+          <p className="text-slate-600">Safety Training</p>
         </div>
         <button
           onClick={() => setShowForm(true)}
@@ -222,7 +222,7 @@ export function Training() {
           <div className="text-center py-12 bg-slate-50 rounded-2xl">
             <GraduationCap className="w-16 h-16 text-slate-400 mx-auto mb-4" />
             <p className="text-slate-600 text-lg">Ingen treningsøkter registrert</p>
-            <p className="text-slate-500">لا توجد جلسات تدريب مسجلة</p>
+            <p className="text-slate-500">No training sessions registered</p>
           </div>
         ) : (
           sessions.map((session) => (
