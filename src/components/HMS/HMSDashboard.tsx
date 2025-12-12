@@ -165,7 +165,7 @@ export function HMSDashboard() {
  } : null;
 
  const trend = analyticsData
- ? analyticsData.monthlyComparison.currentanalyticsData.monthlyComparison.previous
+ ? analyticsData.monthlyComparison.current - analyticsData.monthlyComparison.previous
  : 0;
  const trendPercentage = analyticsData && analyticsData.monthlyComparison.previous > 0
  ? ((trend / analyticsData.monthlyComparison.previous) * 100).toFixed(1)
