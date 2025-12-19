@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { supabase, Zone, Equipment, CleaningTask, Employee } from '../../lib/supabase';
-import { Settings, Plus, Edit2, Trash2, Save, X, Users, Thermometer, Briefcase, Clock, Bell, BellRing, Mail, AlertTriangle, Volume2, Maximize2, Zap, Timer, Play } from 'lucide-react';
+import { Settings, Plus, Edit2, Trash2, Save, X, Users, Thermometer, Briefcase, Clock, Bell, BellRing, Mail, AlertTriangle, Volume2, Maximize2, Zap, Timer, Play, FileText } from 'lucide-react';
 import { NOTIFICATION_SOUNDS, playSound } from '../../utils/notificationSounds';
+import { HACCPReportSettings } from './HACCPReportSettings';
 
 interface ScheduledReportConfig {
  id: string;
@@ -887,6 +888,17 @@ export function SettingsModule() {
  >
  <Settings className="w-4 h-4 inline mr-1" />
  Innstillinger
+ </button>
+ <button
+ onClick={() => setActiveSection('report-settings')}
+ className={`px-4 py-2 rounded-lg transition-all font-bold text-sm ${
+ activeSection === 'report-settings'
+ ? 'bg-emerald-600 text-white'
+ : 'bg-slate-200 text-slate-700 hover:bg-slate-300'
+ }`}
+ >
+ <FileText className="w-4 h-4 inline mr-1" />
+ Rapport innstillinger
  </button>
  <button
  onClick={() => setIsLocked(true)}
@@ -2118,6 +2130,10 @@ export function SettingsModule() {
  </div>
  </div>
  </>
+ )}
+
+ {activeSection === 'report-settings' && (
+ <HACCPReportSettings />
  )}
  </div>
  );

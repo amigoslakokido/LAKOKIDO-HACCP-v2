@@ -6,6 +6,7 @@ import { TemperatureControl } from '../Temperature/TemperatureControl';
 import { CleaningTasks } from '../Cleaning/CleaningTasks';
 import { SettingsModule } from '../Settings/SettingsModule';
 import { CriticalIncidents } from '../Incidents/CriticalIncidents';
+import { HACCPReportsMain } from '../Reports/HACCPReportsMain';
 import { Home, ClipboardCheck, Thermometer, Sparkles, Settings, Menu, X, AlertTriangle, FileBarChart } from 'lucide-react';
 
 export function HACCPApp() {
@@ -44,6 +45,7 @@ export function HACCPApp() {
     { id: 'temperature', name: 'Temperaturkontroll', icon: Thermometer },
     { id: 'cleaning', name: 'Rengjøring', icon: Sparkles },
     { id: 'incidents', name: 'Kritiske hendelser', icon: AlertTriangle },
+    { id: 'reports', name: 'Rapporter', icon: FileBarChart },
     { id: 'settings', name: 'Innstillinger', icon: Settings },
   ];
 
@@ -59,6 +61,8 @@ export function HACCPApp() {
         return <CleaningTasks />;
       case 'incidents':
         return <CriticalIncidents />;
+      case 'reports':
+        return <HACCPReportsMain />;
       case 'settings':
         return <SettingsModule />;
       default:
