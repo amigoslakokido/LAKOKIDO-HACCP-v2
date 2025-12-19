@@ -81,7 +81,7 @@ export function ReportPDF({ report, tempLogs, cleaningLogs, hygieneChecks = [], 
   const totalCleaning = cleaningLogs?.length || 0;
 
   // Get Daglig leder from temperature logs (only daglig_leder signs reports)
-  let dagligLeder = 'Ikke tildelt';
+  let dagligLeder = 'Kontrollør';
 
   // Try to find daglig_leder from temperature logs
   const dagligLederFromLogs = tempLogs?.find(log =>
@@ -463,18 +463,20 @@ export function ReportPDF({ report, tempLogs, cleaningLogs, hygieneChecks = [], 
           <div className="border-t-2 border-slate-300 pt-6 mt-8">
             <div className="mb-6">
               <h3 className="text-lg font-semibold text-slate-800 mb-4">Underskrift</h3>
-              <p className="text-sm text-slate-600 mb-4">Dette dokumentet er godkjent av Daglig leder:</p>
+              <p className="text-sm text-slate-600 mb-4">
+                Dette dokumentet er godkjent av {dagligLeder === 'Kontrollør' ? 'Kontrollør' : 'Daglig leder: ' + dagligLeder}
+              </p>
             </div>
             <div className="max-w-md">
-              {dagligLeder && dagligLeder !== 'Ikke tildelt' && (
-                <div>
-                  <div className="text-sm text-slate-600 mb-2">Underskrift Daglig leder:</div>
-                  <div className="border-b-2 border-slate-400 h-16 flex items-end pb-2">
-                    <span className="text-slate-700 font-medium italic">{dagligLeder}</span>
-                  </div>
-                  <div className="text-xs text-slate-500 mt-1">{formatDate(report.report_date)}</div>
+              <div>
+                <div className="text-sm text-slate-600 mb-2">
+                  Underskrift {dagligLeder === 'Kontrollør' ? 'Kontrollør' : 'Daglig leder'}:
                 </div>
-              )}
+                <div className="border-b-2 border-slate-400 h-16 flex items-end pb-2">
+                  <span className="text-slate-700 font-medium italic">{dagligLeder}</span>
+                </div>
+                <div className="text-xs text-slate-500 mt-1">{formatDate(report.report_date)}</div>
+              </div>
             </div>
           </div>
 
