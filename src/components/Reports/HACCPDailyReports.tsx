@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
-import { FileText, Download, Calendar, CheckCircle, XCircle, AlertTriangle, Loader, Search, Filter, Plus, Eye } from 'lucide-react';
+import { FileText, Download, CheckCircle, XCircle, AlertTriangle, Loader, Search, Filter, Edit2, Trash2, Save, X, User, Thermometer, Droplet, Sparkles, Wind, Clock, Calendar as CalendarIcon } from 'lucide-react';
 import jsPDF from 'jspdf';
 
 interface HACCPReport {
@@ -19,20 +19,16 @@ interface HACCPReport {
   signed_at: string | null;
 }
 
-interface ReportData {
-  temperatures: any[];
-  cleaning: any[];
-  hygiene: any[];
-  cooling: any[];
-}
-
 export function HACCPDailyReports() {
   const [reports, setReports] = useState<HACCPReport[]>([]);
   const [loading, setLoading] = useState(true);
-  const [generating, setGenerating] = useState(false);
-  const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
+  const [editingReport, setEditingReport] = useState<HACCPReport | null>(null);
+  const [editNotes, setEditNotes] = useState('');
+  const [editSignedBy, setEditSignedBy] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [expandedReport, setExpandedReport] = useState<string | null>(null);
 
   useEffect(() => {
     fetchReports();
@@ -55,154 +51,92 @@ export function HACCPDailyReports() {
     }
   };
 
-  const generateReport = async () => {
+  const startEditing = (report: HACCPReport) => {
+    setEditingReport(report);
+    setEditNotes(report.notes || '');
+    setEditSignedBy(report.signed_by || '');
+  };
+
+  const cancelEditing = () => {
+    setEditingReport(null);
+    setEditNotes('');
+    setEditSignedBy('');
+  };
+
+  const saveReport = async () => {
+    if (!editingReport) return;
+
     try {
-      setGenerating(true);
+      setSaving(true);
+      const updateData: any = {
+        notes: editNotes || null,
+      };
 
-      // Fetch all data for the selected date
-      const reportData = await fetchReportData(selectedDate);
-
-      // Calculate overall status
-      const overallStatus = calculateOverallStatus(reportData);
-
-      // Check if report already exists for this date
-      const { data: existing } = await supabase
-        .from('haccp_daily_reports')
-        .select('id')
-        .eq('report_date', selectedDate)
-        .single();
-
-      if (existing) {
-        alert('En rapport finnes allerede for denne datoen. Slett den først hvis du vil generere en ny.');
-        return;
+      if (editSignedBy && !editingReport.signed_by) {
+        updateData.signed_by = editSignedBy;
+        updateData.signed_at = new Date().toISOString();
       }
 
-      // Create report
-      const { data: newReport, error } = await supabase
+      const { error } = await supabase
         .from('haccp_daily_reports')
-        .insert({
-          report_date: selectedDate,
-          generated_by: 'Manuel generering',
-          report_type: 'manual',
-          overall_status: overallStatus,
-          temperature_data: reportData.temperatures,
-          cleaning_data: reportData.cleaning,
-          hygiene_data: reportData.hygiene,
-          cooling_data: reportData.cooling,
-        })
-        .select()
-        .single();
+        .update(updateData)
+        .eq('id', editingReport.id);
 
       if (error) throw error;
 
-      alert('Rapport generert!');
+      alert('Rapport oppdatert!');
+      cancelEditing();
       fetchReports();
     } catch (error) {
-      console.error('Error generating report:', error);
-      alert('Feil ved generering av rapport');
+      console.error('Error updating report:', error);
+      alert('Feil ved oppdatering av rapport');
     } finally {
-      setGenerating(false);
+      setSaving(false);
     }
   };
 
-  const fetchReportData = async (date: string): Promise<ReportData> => {
-    const startDate = new Date(date);
-    startDate.setHours(0, 0, 0, 0);
-    const endDate = new Date(date);
-    endDate.setHours(23, 59, 59, 999);
+  const deleteReport = async (reportId: string, reportDate: string) => {
+    if (!confirm(`Er du sikker på at du vil slette rapporten for ${new Date(reportDate).toLocaleDateString('no-NO')}?`)) {
+      return;
+    }
 
-    // Fetch temperature logs
-    const { data: temperatures } = await supabase
-      .from('temperature_logs')
-      .select(`
-        *,
-        zone:zones(name),
-        equipment:equipment(name),
-        employee:employees(name)
-      `)
-      .gte('timestamp', startDate.toISOString())
-      .lte('timestamp', endDate.toISOString())
-      .order('timestamp', { ascending: false });
+    try {
+      const { error } = await supabase
+        .from('haccp_daily_reports')
+        .delete()
+        .eq('id', reportId);
 
-    // Fetch cleaning logs
-    const { data: cleaning } = await supabase
-      .from('cleaning_logs')
-      .select(`
-        *,
-        task:cleaning_tasks(name, frequency),
-        employee:employees(name)
-      `)
-      .gte('timestamp', startDate.toISOString())
-      .lte('timestamp', endDate.toISOString())
-      .order('timestamp', { ascending: false });
+      if (error) throw error;
 
-    // Fetch hygiene checks
-    const { data: hygiene } = await supabase
-      .from('hygiene_logs')
-      .select(`
-        *,
-        employee:employees(name)
-      `)
-      .gte('timestamp', startDate.toISOString())
-      .lte('timestamp', endDate.toISOString())
-      .order('timestamp', { ascending: false });
-
-    // Fetch cooling logs
-    const { data: cooling } = await supabase
-      .from('cooling_logs')
-      .select(`
-        *,
-        employee:employees(name)
-      `)
-      .gte('timestamp', startDate.toISOString())
-      .lte('timestamp', endDate.toISOString())
-      .order('timestamp', { ascending: false });
-
-    return {
-      temperatures: temperatures || [],
-      cleaning: cleaning || [],
-      hygiene: hygiene || [],
-      cooling: cooling || [],
-    };
-  };
-
-  const calculateOverallStatus = (data: ReportData): 'pass' | 'warning' | 'fail' => {
-    // Check for any failures in temperature logs
-    const tempFailures = data.temperatures.filter(t => t.status === 'danger');
-    if (tempFailures.length > 0) return 'fail';
-
-    // Check for warnings
-    const tempWarnings = data.temperatures.filter(t => t.status === 'warning');
-    const cleaningIssues = data.cleaning.filter(c => !c.completed);
-
-    if (tempWarnings.length > 2 || cleaningIssues.length > 3) return 'warning';
-
-    return 'pass';
+      alert('Rapport slettet!');
+      fetchReports();
+    } catch (error) {
+      console.error('Error deleting report:', error);
+      alert('Feil ved sletting av rapport');
+    }
   };
 
   const downloadPDF = async (report: HACCPReport) => {
     const pdf = new jsPDF();
     let yPos = 20;
 
-    // Add logo
     try {
       const img = new Image();
       img.src = '/visas.jpg';
       await new Promise((resolve) => {
         img.onload = resolve;
+        img.onerror = resolve;
       });
       pdf.addImage(img, 'JPEG', 150, 10, 40, 20);
     } catch (error) {
       console.error('Error loading logo:', error);
     }
 
-    // Title
     pdf.setFontSize(20);
     pdf.setFont('helvetica', 'bold');
     pdf.text('HACCP Daglig Rapport', 20, yPos);
     yPos += 10;
 
-    // Date and metadata
     pdf.setFontSize(12);
     pdf.setFont('helvetica', 'normal');
     pdf.text(`Dato: ${new Date(report.report_date).toLocaleDateString('no-NO')}`, 20, yPos);
@@ -214,13 +148,11 @@ export function HACCPDailyReports() {
       yPos += 7;
     }
 
-    // Status
-    const statusText = report.overall_status === 'pass' ? 'Bestått' :
+    const statusText = report.overall_status === 'pass' ? 'Bestatt' :
                        report.overall_status === 'warning' ? 'Advarsel' : 'Feil';
     pdf.text(`Status: ${statusText}`, 20, yPos);
     yPos += 15;
 
-    // Temperature data
     if (report.temperature_data && report.temperature_data.length > 0) {
       pdf.setFontSize(14);
       pdf.setFont('helvetica', 'bold');
@@ -229,20 +161,20 @@ export function HACCPDailyReports() {
 
       pdf.setFontSize(10);
       pdf.setFont('helvetica', 'normal');
-      report.temperature_data.slice(0, 10).forEach((temp: any) => {
+      report.temperature_data.forEach((temp: any) => {
         if (yPos > 270) {
           pdf.addPage();
           yPos = 20;
         }
         const zoneName = temp.zone?.name || 'Ukjent';
-        const tempValue = temp.temperature ? `${temp.temperature}°C` : 'N/A';
-        pdf.text(`${zoneName}: ${tempValue}`, 25, yPos);
+        const tempValue = temp.temperature ? `${temp.temperature}C` : 'N/A';
+        const time = temp.timestamp ? new Date(temp.timestamp).toLocaleTimeString('no-NO') : '';
+        pdf.text(`${zoneName}: ${tempValue} (${time})`, 25, yPos);
         yPos += 6;
       });
       yPos += 5;
     }
 
-    // Cleaning data
     if (report.cleaning_data && report.cleaning_data.length > 0) {
       if (yPos > 250) {
         pdf.addPage();
@@ -251,25 +183,93 @@ export function HACCPDailyReports() {
 
       pdf.setFontSize(14);
       pdf.setFont('helvetica', 'bold');
-      pdf.text('Rengjøringsoppgaver', 20, yPos);
+      pdf.text('Rengjoringsoppgaver', 20, yPos);
       yPos += 7;
 
       pdf.setFontSize(10);
       pdf.setFont('helvetica', 'normal');
-      report.cleaning_data.slice(0, 10).forEach((clean: any) => {
+      report.cleaning_data.forEach((clean: any) => {
         if (yPos > 270) {
           pdf.addPage();
           yPos = 20;
         }
         const taskName = clean.task?.name || 'Ukjent oppgave';
-        const status = clean.completed ? '✓' : '✗';
-        pdf.text(`${status} ${taskName}`, 25, yPos);
+        const status = clean.completed ? 'OK' : 'Mangler';
+        const time = clean.timestamp ? new Date(clean.timestamp).toLocaleTimeString('no-NO') : '';
+        pdf.text(`${status} ${taskName} (${time})`, 25, yPos);
         yPos += 6;
       });
       yPos += 5;
     }
 
-    // Signature section
+    if (report.hygiene_data && report.hygiene_data.length > 0) {
+      if (yPos > 250) {
+        pdf.addPage();
+        yPos = 20;
+      }
+
+      pdf.setFontSize(14);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('Hygienekontroller', 20, yPos);
+      yPos += 7;
+
+      pdf.setFontSize(10);
+      pdf.setFont('helvetica', 'normal');
+      report.hygiene_data.forEach((hygiene: any) => {
+        if (yPos > 270) {
+          pdf.addPage();
+          yPos = 20;
+        }
+        const time = hygiene.timestamp ? new Date(hygiene.timestamp).toLocaleTimeString('no-NO') : '';
+        const hands = hygiene.hands_washed ? 'OK' : 'Mangler';
+        const uniform = hygiene.uniform_clean ? 'OK' : 'Mangler';
+        pdf.text(`${time} - Hender: ${hands}, Uniform: ${uniform}`, 25, yPos);
+        yPos += 6;
+      });
+      yPos += 5;
+    }
+
+    if (report.cooling_data && report.cooling_data.length > 0) {
+      if (yPos > 250) {
+        pdf.addPage();
+        yPos = 20;
+      }
+
+      pdf.setFontSize(14);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('Nedkjolingslogg', 20, yPos);
+      yPos += 7;
+
+      pdf.setFontSize(10);
+      pdf.setFont('helvetica', 'normal');
+      report.cooling_data.forEach((cooling: any) => {
+        if (yPos > 270) {
+          pdf.addPage();
+          yPos = 20;
+        }
+        const product = cooling.product_name || cooling.product_type || 'Ukjent';
+        const temp = cooling.target_temperature ? `${cooling.target_temperature}C` : 'N/A';
+        pdf.text(`${product}: ${temp}`, 25, yPos);
+        yPos += 6;
+      });
+      yPos += 5;
+    }
+
+    if (report.notes) {
+      if (yPos > 240) {
+        pdf.addPage();
+        yPos = 20;
+      }
+      pdf.setFontSize(12);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('Merknader', 20, yPos);
+      yPos += 7;
+      pdf.setFont('helvetica', 'normal');
+      const lines = pdf.splitTextToSize(report.notes, 170);
+      pdf.text(lines, 20, yPos);
+      yPos += lines.length * 6 + 5;
+    }
+
     if (yPos > 240) {
       pdf.addPage();
       yPos = 20;
@@ -299,19 +299,28 @@ export function HACCPDailyReports() {
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'pass': return <CheckCircle className="w-5 h-5 text-green-600" />;
-      case 'warning': return <AlertTriangle className="w-5 h-5 text-yellow-600" />;
-      case 'fail': return <XCircle className="w-5 h-5 text-red-600" />;
+      case 'pass': return <CheckCircle className="w-6 h-6 text-green-600" />;
+      case 'warning': return <AlertTriangle className="w-6 h-6 text-yellow-600" />;
+      case 'fail': return <XCircle className="w-6 h-6 text-red-600" />;
       default: return null;
     }
   };
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'pass': return 'bg-green-100 text-green-800';
-      case 'warning': return 'bg-yellow-100 text-yellow-800';
-      case 'fail': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'pass': return 'bg-green-100 text-green-800 border-green-300';
+      case 'warning': return 'bg-yellow-100 text-yellow-800 border-yellow-300';
+      case 'fail': return 'bg-red-100 text-red-800 border-red-300';
+      default: return 'bg-gray-100 text-gray-800 border-gray-300';
+    }
+  };
+
+  const getTempStatusColor = (status: string) => {
+    switch (status) {
+      case 'normal': return 'bg-green-50 border-green-200 text-green-800';
+      case 'warning': return 'bg-yellow-50 border-yellow-200 text-yellow-800';
+      case 'danger': return 'bg-red-50 border-red-200 text-red-800';
+      default: return 'bg-slate-50 border-slate-200 text-slate-800';
     }
   };
 
@@ -325,42 +334,11 @@ export function HACCPDailyReports() {
 
   return (
     <div className="space-y-6">
-      {/* Generate Report Section */}
-      <div className="bg-gradient-to-r from-blue-50 to-emerald-50 rounded-xl p-6 border-2 border-blue-200">
-        <h3 className="text-xl font-bold text-slate-800 mb-4">Generer ny rapport</h3>
-        <div className="flex flex-wrap gap-4 items-end">
-          <div className="flex-1 min-w-[200px]">
-            <label className="block text-sm font-semibold text-slate-700 mb-2">
-              Velg dato
-            </label>
-            <input
-              type="date"
-              value={selectedDate}
-              onChange={(e) => setSelectedDate(e.target.value)}
-              className="w-full px-4 py-2 border-2 border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
-          </div>
-          <button
-            onClick={generateReport}
-            disabled={generating}
-            className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all font-bold disabled:opacity-50 flex items-center gap-2"
-          >
-            {generating ? (
-              <>
-                <Loader className="w-5 h-5 animate-spin" />
-                Genererer...
-              </>
-            ) : (
-              <>
-                <Plus className="w-5 h-5" />
-                Generer rapport
-              </>
-            )}
-          </button>
-        </div>
+      <div className="bg-gradient-to-r from-blue-600 to-emerald-600 rounded-xl p-6 text-white">
+        <h2 className="text-2xl font-bold mb-2">HACCP Daglige Rapporter</h2>
+        <p className="text-blue-100">Oversikt over alle genererte rapporter</p>
       </div>
 
-      {/* Filters */}
       <div className="flex flex-wrap gap-4 items-center">
         <div className="flex-1 min-w-[200px]">
           <div className="relative">
@@ -370,7 +348,7 @@ export function HACCPDailyReports() {
               placeholder="Søk etter dato..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border-2 border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full pl-10 pr-4 py-3 border-2 border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-lg"
             />
           </div>
         </div>
@@ -379,7 +357,7 @@ export function HACCPDailyReports() {
           <select
             value={filterStatus}
             onChange={(e) => setFilterStatus(e.target.value)}
-            className="px-4 py-2 border-2 border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="px-4 py-3 border-2 border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-lg font-semibold"
           >
             <option value="all">Alle statuser</option>
             <option value="pass">Bestått</option>
@@ -389,91 +367,338 @@ export function HACCPDailyReports() {
         </div>
       </div>
 
-      {/* Reports List */}
-      <div className="space-y-4">
+      <div className="space-y-6">
         {filteredReports.length === 0 ? (
-          <div className="text-center py-12 bg-slate-50 rounded-xl">
-            <FileText className="w-16 h-16 text-slate-300 mx-auto mb-4" />
-            <p className="text-slate-600 text-lg">Ingen rapporter funnet</p>
+          <div className="text-center py-16 bg-slate-50 rounded-xl border-2 border-slate-200">
+            <FileText className="w-20 h-20 text-slate-300 mx-auto mb-4" />
+            <p className="text-slate-600 text-xl font-semibold">Ingen rapporter funnet</p>
           </div>
         ) : (
           filteredReports.map((report) => (
             <div
               key={report.id}
-              className="bg-white rounded-xl border-2 border-slate-200 p-6 hover:shadow-lg transition-all"
+              className="bg-white rounded-2xl border-2 border-slate-200 shadow-lg hover:shadow-xl transition-all overflow-hidden"
             >
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-4">
-                  {getStatusIcon(report.overall_status)}
-                  <div>
-                    <h4 className="text-lg font-bold text-slate-800">
-                      {new Date(report.report_date).toLocaleDateString('no-NO', {
-                        weekday: 'long',
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric'
-                      })}
+              {editingReport?.id === report.id ? (
+                <div className="p-6 space-y-4">
+                  <div className="flex items-center justify-between mb-4">
+                    <h4 className="text-xl font-bold text-slate-800">
+                      Rediger rapport - {new Date(report.report_date).toLocaleDateString('no-NO')}
                     </h4>
-                    <p className="text-sm text-slate-600">
-                      Generert: {new Date(report.generated_at).toLocaleString('no-NO')}
-                    </p>
+                    <button
+                      onClick={cancelEditing}
+                      className="p-2 hover:bg-slate-100 rounded-lg"
+                    >
+                      <X className="w-6 h-6 text-slate-600" />
+                    </button>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-bold text-slate-700 mb-2">
+                      Merknader
+                    </label>
+                    <textarea
+                      value={editNotes}
+                      onChange={(e) => setEditNotes(e.target.value)}
+                      rows={4}
+                      className="w-full px-4 py-3 border-2 border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="Legg til merknader..."
+                    />
+                  </div>
+
+                  {!report.signed_by && (
+                    <div>
+                      <label className="block text-sm font-bold text-slate-700 mb-2">
+                        Signatur (Daglig leder)
+                      </label>
+                      <input
+                        type="text"
+                        value={editSignedBy}
+                        onChange={(e) => setEditSignedBy(e.target.value)}
+                        className="w-full px-4 py-3 border-2 border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        placeholder="Navn på Daglig leder..."
+                      />
+                    </div>
+                  )}
+
+                  <div className="flex gap-3">
+                    <button
+                      onClick={saveReport}
+                      disabled={saving}
+                      className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all font-bold disabled:opacity-50 text-lg"
+                    >
+                      {saving ? (
+                        <>
+                          <Loader className="w-5 h-5 animate-spin" />
+                          Lagrer...
+                        </>
+                      ) : (
+                        <>
+                          <Save className="w-5 h-5" />
+                          Lagre endringer
+                        </>
+                      )}
+                    </button>
                   </div>
                 </div>
-                <div className="flex items-center gap-3">
-                  <span className={`px-3 py-1 rounded-full text-sm font-bold ${getStatusColor(report.overall_status)}`}>
-                    {report.overall_status === 'pass' ? 'Bestått' :
-                     report.overall_status === 'warning' ? 'Advarsel' : 'Feil'}
-                  </span>
-                  <span className="px-3 py-1 bg-slate-100 text-slate-700 rounded-full text-sm font-semibold">
-                    {report.report_type === 'manual' ? 'Manuell' : 'Automatisk'}
-                  </span>
-                </div>
-              </div>
+              ) : (
+                <>
+                  <div className={`p-6 border-b-4 ${getStatusColor(report.overall_status)}`}>
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center gap-4">
+                        {getStatusIcon(report.overall_status)}
+                        <div>
+                          <h4 className="text-2xl font-bold text-slate-800">
+                            {new Date(report.report_date).toLocaleDateString('no-NO', {
+                              weekday: 'long',
+                              year: 'numeric',
+                              month: 'long',
+                              day: 'numeric'
+                            })}
+                          </h4>
+                          <p className="text-sm text-slate-600 flex items-center gap-2 mt-1">
+                            <Clock className="w-4 h-4" />
+                            Generert: {new Date(report.generated_at).toLocaleString('no-NO')}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className={`px-4 py-2 rounded-full text-base font-bold border-2 ${getStatusColor(report.overall_status)}`}>
+                          {report.overall_status === 'pass' ? 'Bestått' :
+                           report.overall_status === 'warning' ? 'Advarsel' : 'Feil'}
+                        </span>
+                        <span className="px-4 py-2 bg-slate-100 text-slate-700 rounded-full text-base font-semibold border-2 border-slate-300">
+                          {report.report_type === 'manual' ? 'Manuell' : 'Automatisk'}
+                        </span>
+                      </div>
+                    </div>
 
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-                <div className="bg-blue-50 rounded-lg p-3">
-                  <p className="text-xs text-blue-600 font-semibold mb-1">Temperatur</p>
-                  <p className="text-2xl font-bold text-blue-700">
-                    {report.temperature_data?.length || 0}
-                  </p>
-                </div>
-                <div className="bg-emerald-50 rounded-lg p-3">
-                  <p className="text-xs text-emerald-600 font-semibold mb-1">Rengjøring</p>
-                  <p className="text-2xl font-bold text-emerald-700">
-                    {report.cleaning_data?.length || 0}
-                  </p>
-                </div>
-                <div className="bg-purple-50 rounded-lg p-3">
-                  <p className="text-xs text-purple-600 font-semibold mb-1">Hygiene</p>
-                  <p className="text-2xl font-bold text-purple-700">
-                    {report.hygiene_data?.length || 0}
-                  </p>
-                </div>
-                <div className="bg-orange-50 rounded-lg p-3">
-                  <p className="text-xs text-orange-600 font-semibold mb-1">Nedkjøling</p>
-                  <p className="text-2xl font-bold text-orange-700">
-                    {report.cooling_data?.length || 0}
-                  </p>
-                </div>
-              </div>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-4 border-2 border-blue-200">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Thermometer className="w-5 h-5 text-blue-600" />
+                          <p className="text-xs text-blue-700 font-bold uppercase">Temperatur</p>
+                        </div>
+                        <p className="text-3xl font-bold text-blue-800">
+                          {report.temperature_data?.length || 0}
+                        </p>
+                        <p className="text-xs text-blue-600 mt-1">målinger</p>
+                      </div>
+                      <div className="bg-gradient-to-br from-emerald-50 to-emerald-100 rounded-xl p-4 border-2 border-emerald-200">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Sparkles className="w-5 h-5 text-emerald-600" />
+                          <p className="text-xs text-emerald-700 font-bold uppercase">Rengjøring</p>
+                        </div>
+                        <p className="text-3xl font-bold text-emerald-800">
+                          {report.cleaning_data?.length || 0}
+                        </p>
+                        <p className="text-xs text-emerald-600 mt-1">oppgaver</p>
+                      </div>
+                      <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl p-4 border-2 border-purple-200">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Droplet className="w-5 h-5 text-purple-600" />
+                          <p className="text-xs text-purple-700 font-bold uppercase">Hygiene</p>
+                        </div>
+                        <p className="text-3xl font-bold text-purple-800">
+                          {report.hygiene_data?.length || 0}
+                        </p>
+                        <p className="text-xs text-purple-600 mt-1">kontroller</p>
+                      </div>
+                      <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-xl p-4 border-2 border-orange-200">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Wind className="w-5 h-5 text-orange-600" />
+                          <p className="text-xs text-orange-700 font-bold uppercase">Nedkjøling</p>
+                        </div>
+                        <p className="text-3xl font-bold text-orange-800">
+                          {report.cooling_data?.length || 0}
+                        </p>
+                        <p className="text-xs text-orange-600 mt-1">logger</p>
+                      </div>
+                    </div>
+                  </div>
 
-              {report.signed_by && (
-                <div className="bg-green-50 border-l-4 border-green-500 p-3 mb-4">
-                  <p className="text-sm text-green-800">
-                    <span className="font-bold">Signert av:</span> {report.signed_by} - {new Date(report.signed_at!).toLocaleString('no-NO')}
-                  </p>
-                </div>
+                  {expandedReport === report.id && (
+                    <div className="p-6 bg-slate-50 space-y-6">
+                      {report.temperature_data && report.temperature_data.length > 0 && (
+                        <div className="bg-white rounded-xl p-6 border-2 border-blue-200">
+                          <div className="flex items-center gap-3 mb-4">
+                            <Thermometer className="w-6 h-6 text-blue-600" />
+                            <h5 className="text-lg font-bold text-blue-800">Temperaturmålinger</h5>
+                          </div>
+                          <div className="grid gap-3">
+                            {report.temperature_data.map((temp: any, idx: number) => (
+                              <div key={idx} className={`p-3 rounded-lg border-2 ${getTempStatusColor(temp.status)}`}>
+                                <div className="flex items-center justify-between">
+                                  <div>
+                                    <p className="font-bold">{temp.zone?.name || 'Ukjent sone'}</p>
+                                    <p className="text-sm text-slate-600">
+                                      {temp.equipment?.name || ''}
+                                    </p>
+                                  </div>
+                                  <div className="text-right">
+                                    <p className="text-2xl font-bold">{temp.temperature}°C</p>
+                                    <p className="text-xs text-slate-600">
+                                      {new Date(temp.timestamp).toLocaleTimeString('no-NO')}
+                                    </p>
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {report.cleaning_data && report.cleaning_data.length > 0 && (
+                        <div className="bg-white rounded-xl p-6 border-2 border-emerald-200">
+                          <div className="flex items-center gap-3 mb-4">
+                            <Sparkles className="w-6 h-6 text-emerald-600" />
+                            <h5 className="text-lg font-bold text-emerald-800">Rengjøringsoppgaver</h5>
+                          </div>
+                          <div className="grid gap-3">
+                            {report.cleaning_data.map((clean: any, idx: number) => (
+                              <div key={idx} className={`p-3 rounded-lg border-2 ${clean.completed ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center gap-3">
+                                    {clean.completed ? (
+                                      <CheckCircle className="w-5 h-5 text-green-600" />
+                                    ) : (
+                                      <XCircle className="w-5 h-5 text-red-600" />
+                                    )}
+                                    <div>
+                                      <p className="font-bold">{clean.task?.name || 'Ukjent oppgave'}</p>
+                                      <p className="text-sm text-slate-600">
+                                        {clean.employee?.name || ''}
+                                      </p>
+                                    </div>
+                                  </div>
+                                  <p className="text-xs text-slate-600">
+                                    {new Date(clean.timestamp).toLocaleTimeString('no-NO')}
+                                  </p>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {report.hygiene_data && report.hygiene_data.length > 0 && (
+                        <div className="bg-white rounded-xl p-6 border-2 border-purple-200">
+                          <div className="flex items-center gap-3 mb-4">
+                            <Droplet className="w-6 h-6 text-purple-600" />
+                            <h5 className="text-lg font-bold text-purple-800">Hygienekontroller</h5>
+                          </div>
+                          <div className="grid gap-3">
+                            {report.hygiene_data.map((hygiene: any, idx: number) => (
+                              <div key={idx} className="p-3 rounded-lg border-2 bg-purple-50 border-purple-200">
+                                <div className="flex items-center justify-between">
+                                  <div>
+                                    <p className="font-bold">{hygiene.employee?.name || 'Ukjent'}</p>
+                                    <div className="flex gap-4 mt-2">
+                                      <span className={`text-sm ${hygiene.hands_washed ? 'text-green-700' : 'text-red-700'}`}>
+                                        Hender: {hygiene.hands_washed ? 'OK' : 'Mangler'}
+                                      </span>
+                                      <span className={`text-sm ${hygiene.uniform_clean ? 'text-green-700' : 'text-red-700'}`}>
+                                        Uniform: {hygiene.uniform_clean ? 'OK' : 'Mangler'}
+                                      </span>
+                                      <span className={`text-sm ${hygiene.hair_covered ? 'text-green-700' : 'text-red-700'}`}>
+                                        Hår: {hygiene.hair_covered ? 'OK' : 'Mangler'}
+                                      </span>
+                                    </div>
+                                  </div>
+                                  <p className="text-xs text-slate-600">
+                                    {new Date(hygiene.timestamp).toLocaleTimeString('no-NO')}
+                                  </p>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {report.cooling_data && report.cooling_data.length > 0 && (
+                        <div className="bg-white rounded-xl p-6 border-2 border-orange-200">
+                          <div className="flex items-center gap-3 mb-4">
+                            <Wind className="w-6 h-6 text-orange-600" />
+                            <h5 className="text-lg font-bold text-orange-800">Nedkjølingslogg</h5>
+                          </div>
+                          <div className="grid gap-3">
+                            {report.cooling_data.map((cooling: any, idx: number) => (
+                              <div key={idx} className="p-3 rounded-lg border-2 bg-orange-50 border-orange-200">
+                                <div className="flex items-center justify-between">
+                                  <div>
+                                    <p className="font-bold">{cooling.product_name || cooling.product_type || 'Ukjent produkt'}</p>
+                                    <p className="text-sm text-slate-600">
+                                      Mengde: {cooling.quantity} {cooling.unit}
+                                    </p>
+                                  </div>
+                                  <div className="text-right">
+                                    <p className="text-xl font-bold text-orange-800">
+                                      {cooling.target_temperature}°C
+                                    </p>
+                                    <p className="text-xs text-slate-600">
+                                      {new Date(cooling.timestamp).toLocaleTimeString('no-NO')}
+                                    </p>
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  <div className="p-6 space-y-4">
+                    {report.notes && (
+                      <div className="bg-blue-50 border-l-4 border-blue-500 p-4 rounded-r-lg">
+                        <p className="text-sm text-blue-900">
+                          <span className="font-bold">Merknader:</span> {report.notes}
+                        </p>
+                      </div>
+                    )}
+
+                    {report.signed_by && (
+                      <div className="bg-green-50 border-l-4 border-green-500 p-4 rounded-r-lg flex items-center gap-3">
+                        <User className="w-5 h-5 text-green-700" />
+                        <p className="text-sm text-green-900">
+                          <span className="font-bold">Signert av:</span> {report.signed_by} - {new Date(report.signed_at!).toLocaleString('no-NO')}
+                        </p>
+                      </div>
+                    )}
+
+                    <div className="flex flex-wrap gap-3">
+                      <button
+                        onClick={() => setExpandedReport(expandedReport === report.id ? null : report.id)}
+                        className="flex-1 min-w-[200px] flex items-center justify-center gap-2 px-6 py-3 bg-slate-600 text-white rounded-lg hover:bg-slate-700 transition-all font-bold text-lg"
+                      >
+                        <FileText className="w-5 h-5" />
+                        {expandedReport === report.id ? 'Skjul detaljer' : 'Vis detaljer'}
+                      </button>
+                      <button
+                        onClick={() => startEditing(report)}
+                        className="flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all font-bold text-lg"
+                      >
+                        <Edit2 className="w-5 h-5" />
+                        Rediger
+                      </button>
+                      <button
+                        onClick={() => downloadPDF(report)}
+                        className="flex-1 min-w-[200px] flex items-center justify-center gap-2 px-6 py-3 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-all font-bold text-lg"
+                      >
+                        <Download className="w-5 h-5" />
+                        Last ned PDF
+                      </button>
+                      <button
+                        onClick={() => deleteReport(report.id, report.report_date)}
+                        className="flex items-center justify-center gap-2 px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-all font-bold text-lg"
+                      >
+                        <Trash2 className="w-5 h-5" />
+                        Slett
+                      </button>
+                    </div>
+                  </div>
+                </>
               )}
-
-              <div className="flex gap-3">
-                <button
-                  onClick={() => downloadPDF(report)}
-                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all font-bold"
-                >
-                  <Download className="w-5 h-5" />
-                  Last ned PDF
-                </button>
-              </div>
             </div>
           ))
         )}
