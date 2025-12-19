@@ -76,15 +76,6 @@ export type Employee = {
   created_at: string;
 };
 
-export type DailyReport = {
-  id: string;
-  report_date: string;
-  generated_by: string;
-  content: any;
-  created_at: string;
-  overall_status?: 'safe' | 'warning' | 'danger';
-};
-
 export type IncidentAttachment = {
   id: string;
   incident_id: string;

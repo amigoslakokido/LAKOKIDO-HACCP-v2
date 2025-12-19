@@ -7,8 +7,6 @@ import {
 } from 'lucide-react';
 
 interface DashboardStats {
-  totalReports: number;
-  reportsThisWeek: number;
   criticalIncidents: number;
   complianceRate: number;
   avgTemperature: number;
@@ -16,7 +14,6 @@ interface DashboardStats {
   hygieneChecks: number;
   cleaningTasks: number;
   employeesActive: number;
-  lastReportDate: string;
 }
 
 export function AnalyticsDashboard() {
@@ -42,23 +39,17 @@ export function AnalyticsDashboard() {
       const weekAgoStr = weekAgo.toISOString().split('T')[0];
 
       const [
-        { count: totalReports },
-        { count: reportsThisWeek },
         { count: criticalIncidents },
         { data: tempLogs },
         { data: hygieneData },
         { data: cleaningData },
-        { data: employees },
-        { data: lastReport }
+        { data: employees }
       ] = await Promise.all([
-        supabase.from('daily_reports').select('*', { count: 'exact', head: true }),
-        supabase.from('daily_reports').select('*', { count: 'exact', head: true }).gte('report_date', weekAgoStr),
         supabase.from('critical_incidents').select('*', { count: 'exact', head: true }).eq('severity', 'critical'),
         supabase.from('temperature_logs').select('temperature, status').limit(100),
         supabase.from('hygiene_checks').select('*', { count: 'exact', head: true }),
         supabase.from('cleaning_logs').select('*', { count: 'exact', head: true }),
-        supabase.from('employees').select('*', { count: 'exact', head: true }).eq('active', true),
-        supabase.from('daily_reports').select('report_date').order('report_date', { ascending: false }).limit(1)
+        supabase.from('employees').select('*', { count: 'exact', head: true }).eq('active', true)
       ]);
 
       const avgTemp = tempLogs?.length
@@ -72,16 +63,13 @@ export function AnalyticsDashboard() {
       const complianceRate = totalChecks > 0 ? ((totalChecks - violations) / totalChecks) * 100 : 100;
 
       setStats({
-        totalReports: totalReports || 0,
-        reportsThisWeek: reportsThisWeek || 0,
         criticalIncidents: criticalIncidents || 0,
         complianceRate: Math.round(complianceRate),
         avgTemperature: Math.round(avgTemp * 10) / 10,
         tempViolations: tempViolationsCount,
         hygieneChecks: hygieneData || 0,
         cleaningTasks: cleaningData || 0,
-        employeesActive: employees || 0,
-        lastReportDate: lastReport?.[0]?.report_date || 'N/A'
+        employeesActive: employees || 0
       });
     } catch (error) {
       console.error('Error loading stats:', error);
@@ -146,21 +134,7 @@ export function AnalyticsDashboard() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-xl p-6 text-white shadow-lg hover:shadow-xl transition-shadow">
-          <div className="flex items-center justify-between mb-4">
-            <CheckCircle className="w-10 h-10" />
-            <div className="text-right">
-              <div className="text-3xl font-bold">{stats.totalReports}</div>
-              <div className="text-green-100 text-sm">Totale rapporter</div>
-            </div>
-          </div>
-          <div className="flex items-center gap-2 text-green-100">
-            <TrendingUp className="w-4 h-4" />
-            <span className="text-sm">+{stats.reportsThisWeek} denne uken</span>
-          </div>
-        </div>
-
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <div className={`rounded-xl p-6 text-white shadow-lg hover:shadow-xl transition-shadow ${
           stats.criticalIncidents > 0
             ? 'bg-gradient-to-br from-red-500 to-red-600'
@@ -250,18 +224,6 @@ export function AnalyticsDashboard() {
           </div>
         </div>
 
-        <div className="bg-white rounded-xl p-6 shadow-lg border-l-4 border-indigo-500">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="p-3 bg-indigo-100 rounded-lg">
-              <Calendar className="w-6 h-6 text-indigo-600" />
-            </div>
-            <div>
-              <div className="text-lg font-bold text-gray-900">{stats.lastReportDate}</div>
-              <div className="text-sm text-gray-600">Siste rapport</div>
-            </div>
-          </div>
-          <div className="text-xs text-indigo-600 font-medium">Oppdatert kontinuerlig</div>
-        </div>
       </div>
 
       <div className="bg-gradient-to-r from-amber-50 to-amber-100 border-2 border-amber-300 rounded-xl p-6">
@@ -271,14 +233,10 @@ export function AnalyticsDashboard() {
           </div>
           <div className="flex-1">
             <h3 className="text-lg font-bold text-amber-900 mb-2">Ytelsessammendrag</h3>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
               <div>
                 <div className="text-amber-700 font-medium">Kvalitetsscore</div>
                 <div className="text-2xl font-bold text-amber-900">{stats.complianceRate}%</div>
-              </div>
-              <div>
-                <div className="text-amber-700 font-medium">Rapport frekvens</div>
-                <div className="text-2xl font-bold text-amber-900">{Math.round(stats.totalReports / 30)}/mnd</div>
               </div>
               <div>
                 <div className="text-amber-700 font-medium">Gjennomføring</div>

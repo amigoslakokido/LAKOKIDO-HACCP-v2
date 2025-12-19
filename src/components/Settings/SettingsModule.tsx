@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { supabase, Zone, Equipment, CleaningTask, Employee } from '../../lib/supabase';
 import { Settings, Plus, Edit2, Trash2, Save, X, Users, Thermometer, Briefcase, Clock, Bell, BellRing, Mail, AlertTriangle, Volume2, Maximize2, Zap, Timer, Play, Building2 } from 'lucide-react';
 import { NOTIFICATION_SOUNDS, playSound } from '../../utils/notificationSounds';
-import { AdminReportsSection } from './AdminReportsSection';
 import { CompanyModule } from '../Company/CompanyModule';
 import { AutoReportsGenerator } from './AutoReportsGenerator';
 
@@ -2145,8 +2144,6 @@ export function SettingsModule() {
  ))}
  </div>
  </div>
-
- <AdminReportsSection />
  </>
  )}
  </div>

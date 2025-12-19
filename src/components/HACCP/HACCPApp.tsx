@@ -4,10 +4,9 @@ import { CompactDailyRoutine } from '../RoutineTasks/CompactDailyRoutine';
 import RoutineReportsList from '../RoutineTasks/RoutineReportsList';
 import { TemperatureControl } from '../Temperature/TemperatureControl';
 import { CleaningTasks } from '../Cleaning/CleaningTasks';
-import { UnifiedReports } from '../Reports/UnifiedReports';
 import { SettingsModule } from '../Settings/SettingsModule';
 import { CriticalIncidents } from '../Incidents/CriticalIncidents';
-import { Home, ClipboardCheck, Thermometer, Sparkles, FileText, Settings, Menu, X, AlertTriangle, FileBarChart } from 'lucide-react';
+import { Home, ClipboardCheck, Thermometer, Sparkles, Settings, Menu, X, AlertTriangle, FileBarChart } from 'lucide-react';
 
 export function HACCPApp() {
   const [currentView, setCurrentView] = useState('dashboard');
@@ -44,7 +43,6 @@ export function HACCPApp() {
     { id: 'routine', name: 'Daglige rutiner', icon: ClipboardCheck },
     { id: 'temperature', name: 'Temperaturkontroll', icon: Thermometer },
     { id: 'cleaning', name: 'Rengjøring', icon: Sparkles },
-    { id: 'reports', name: 'Rapporter', icon: FileText },
     { id: 'incidents', name: 'Kritiske hendelser', icon: AlertTriangle },
     { id: 'settings', name: 'Innstillinger', icon: Settings },
   ];
@@ -59,8 +57,6 @@ export function HACCPApp() {
         return <TemperatureControl />;
       case 'cleaning':
         return <CleaningTasks />;
-      case 'reports':
-        return <UnifiedReports />;
       case 'incidents':
         return <CriticalIncidents />;
       case 'settings':

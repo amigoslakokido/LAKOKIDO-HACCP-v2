@@ -11,7 +11,6 @@ interface DashboardStats {
   tasksCompleted: number;
   tasksTotal: number;
   riskLevel: 'low' | 'medium' | 'high' | 'critical';
-  dailyReports: number;
   criticalAlerts: number;
   avgTemperature: number;
   tempViolations: number;
@@ -82,7 +81,6 @@ export function HACCPDashboard() {
       const today = new Date().toISOString().split('T')[0];
 
       const [
-        { data: reports, count: reportsCount },
         { data: tempLogs },
         { data: cleaningData, count: cleaningCompleted },
         { count: cleaningTotal },
@@ -90,7 +88,6 @@ export function HACCPDashboard() {
         { data: incidents },
         { data: routineTasks }
       ] = await Promise.all([
-        supabase.from('daily_reports').select('*', { count: 'exact' }).gte('report_date', today),
         supabase.from('temperature_logs').select('temperature, status').eq('log_date', today),
         supabase.from('cleaning_logs').select('*', { count: 'exact' }).eq('log_date', today).eq('status', 'completed'),
         supabase.from('cleaning_tasks').select('*', { count: 'exact', head: true }).eq('active', true),
@@ -129,7 +126,6 @@ export function HACCPDashboard() {
         tasksCompleted: completedTasks,
         tasksTotal: totalTasks,
         riskLevel,
-        dailyReports: reportsCount || 0,
         criticalAlerts: incidents?.length || 0,
         avgTemperature: Math.round(avgTemp * 10) / 10,
         tempViolations,
@@ -266,14 +262,6 @@ export function HACCPDashboard() {
             <div className="text-3xl font-bold">{stats.tasksCompleted}/{stats.tasksTotal}</div>
           </div>
           <div className="text-sm opacity-90">Oppgaver fullført</div>
-        </div>
-
-        <div className="bg-gradient-to-br from-purple-500 to-purple-700 rounded-2xl p-6 text-white shadow-lg hover:shadow-2xl transition-all transform hover:scale-105">
-          <div className="flex items-center gap-3 mb-3">
-            <FileText className="w-8 h-8" />
-            <div className="text-3xl font-bold">{stats.dailyReports}</div>
-          </div>
-          <div className="text-sm opacity-90">Rapporter i dag</div>
         </div>
 
         <div className="bg-gradient-to-br from-cyan-500 to-blue-600 rounded-2xl p-6 text-white shadow-lg hover:shadow-2xl transition-all transform hover:scale-105">
