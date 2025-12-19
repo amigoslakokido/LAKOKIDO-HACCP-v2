@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { FileText, Calendar, AlertTriangle } from 'lucide-react';
-import { HACCPDailyReports } from './HACCPDailyReports';
+import { HACCPDailyReportsList } from './HACCPDailyReportsList';
 import RoutineReportsList from '../RoutineTasks/RoutineReportsList';
 import { CriticalIncidentReports } from './CriticalIncidentReports';
 
@@ -62,7 +62,7 @@ export function HACCPReportsMain() {
 
         {/* Content */}
         <div className="bg-white rounded-2xl shadow-lg p-6">
-          {activeSection === 'haccp' && <HACCPDailyReports />}
+          {activeSection === 'haccp' && <HACCPDailyReportsList />}
           {activeSection === 'routine' && <RoutineReportsList />}
           {activeSection === 'critical' && <CriticalIncidentReports />}
         </div>

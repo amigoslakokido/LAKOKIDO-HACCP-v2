@@ -142,31 +142,89 @@ export function HACCPReportSettings() {
         return;
       }
 
-      const [temperatureData, cleaningData, hygieneData, coolingData] = await Promise.all([
-        supabase.from('temperature_logs')
-          .select('*, zone:zones(*), equipment:equipment(*)')
-          .gte('timestamp', `${reportDate}T00:00:00`)
-          .lte('timestamp', `${reportDate}T23:59:59`)
-          .order('timestamp', { ascending: false }),
+      // Fetch data using correct date/time columns
+      const [tempResult, cleanResult, hygieneResult, coolingResult] = await Promise.all([
+        supabase
+          .from('temperature_logs')
+          .select(`
+            id,
+            log_date,
+            log_time,
+            temperature,
+            status,
+            notes,
+            equipment:equipment_id (
+              id,
+              name,
+              zone:zone_id (
+                id,
+                name
+              )
+            )
+          `)
+          .eq('log_date', reportDate)
+          .order('log_time', { ascending: false }),
 
-        supabase.from('cleaning_logs')
-          .select('*, task:cleaning_tasks(*), employee:employees(*)')
-          .gte('timestamp', `${reportDate}T00:00:00`)
-          .lte('timestamp', `${reportDate}T23:59:59`)
-          .order('timestamp', { ascending: false }),
+        supabase
+          .from('cleaning_logs')
+          .select(`
+            id,
+            log_date,
+            log_time,
+            status,
+            notes,
+            task:task_id (
+              task_name
+            ),
+            employee:completed_by (
+              name
+            )
+          `)
+          .eq('log_date', reportDate)
+          .order('log_time', { ascending: false }),
 
-        supabase.from('hygiene_checks')
-          .select('*, employee:employees(*)')
-          .gte('timestamp', `${reportDate}T00:00:00`)
-          .lte('timestamp', `${reportDate}T23:59:59`)
-          .order('timestamp', { ascending: false }),
-
-        supabase.from('cooling_logs')
+        supabase
+          .from('hygiene_checks')
           .select('*')
-          .gte('timestamp', `${reportDate}T00:00:00`)
-          .lte('timestamp', `${reportDate}T23:59:59`)
-          .order('timestamp', { ascending: false })
+          .eq('check_date', reportDate),
+
+        supabase
+          .from('cooling_logs')
+          .select('*')
+          .eq('log_date', reportDate)
+          .order('start_time', { ascending: false })
       ]);
+
+      // Transform data to match expected format
+      const temperatureData = {
+        data: tempResult.data?.map((t: any) => ({
+          ...t,
+          zone: t.equipment?.zone || { name: 'Annet' },
+          equipment: { name: t.equipment?.name || 'Ukjent' }
+        })) || [],
+        error: tempResult.error
+      };
+
+      const cleaningData = {
+        data: cleanResult.data?.map((c: any) => ({
+          ...c,
+          completed: c.status === 'completed',
+          task: { name: c.task?.task_name || 'Ukjent' },
+          employee: c.employee || { name: 'Ukjent' }
+        })) || [],
+        error: cleanResult.error
+      };
+
+      const hygieneData = {
+        data: hygieneResult.data?.map((h: any) => ({
+          ...h,
+          check_time: '08:00:00',
+          employee: { name: h.staff_name || 'Ukjent' }
+        })) || [],
+        error: hygieneResult.error
+      };
+
+      const coolingData = coolingResult;
 
       let overallStatus: 'pass' | 'warning' | 'fail' = 'pass';
 
