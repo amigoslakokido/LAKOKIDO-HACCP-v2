@@ -1,9 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase, Zone, Equipment, CleaningTask, Employee } from '../../lib/supabase';
-import { Settings, Plus, Edit2, Trash2, Save, X, Users, Thermometer, Briefcase, Clock, Bell, BellRing, Mail, AlertTriangle, Volume2, Maximize2, Zap, Timer, Play, Building2 } from 'lucide-react';
+import { Settings, Plus, Edit2, Trash2, Save, X, Users, Thermometer, Briefcase, Clock, Bell, BellRing, Mail, AlertTriangle, Volume2, Maximize2, Zap, Timer, Play } from 'lucide-react';
 import { NOTIFICATION_SOUNDS, playSound } from '../../utils/notificationSounds';
-import { CompanyModule } from '../Company/CompanyModule';
-import { AutoReportsGenerator } from './AutoReportsGenerator';
 
 interface ScheduledReportConfig {
  id: string;
@@ -891,27 +889,6 @@ export function SettingsModule() {
  Innstillinger
  </button>
  <button
- onClick={() => setActiveSection('company')}
- className={`px-4 py-2 rounded-lg transition-all font-bold text-sm ${
- activeSection === 'company'
- ? 'bg-blue-600 text-white'
- : 'bg-slate-200 text-slate-700 hover:bg-slate-300'
- }`}
- >
- <Building2 className="w-4 h-4 inline mr-1" />
- Firmainfo
- </button>
- <button
- onClick={() => setActiveSection('reports')}
- className={`px-4 py-2 rounded-lg transition-all font-bold text-sm ${
- activeSection === 'reports'
- ? 'bg-blue-600 text-white'
- : 'bg-slate-200 text-slate-700 hover:bg-slate-300'
- }`}
- >
- 📄 Rapporter
- </button>
- <button
  onClick={() => setIsLocked(true)}
  className="px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-all font-bold text-sm"
  >
@@ -920,11 +897,7 @@ export function SettingsModule() {
  </div>
  </div>
 
- {activeSection === 'reports' ? (
- <AutoReportsGenerator />
- ) : activeSection === 'company' ? (
- <CompanyModule />
- ) : (
+ {activeSection === 'settings' && (
  <>
  {/* Notification Settings Section */}
  <div className="bg-gradient-to-br from-blue-50 to-emerald-50 rounded-3xl shadow-xl border-2 border-blue-200/50 overflow-hidden">
