@@ -6,6 +6,8 @@ export function UnifiedReportSettings() {
   const [loading, setLoading] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [selectedEndDate, setSelectedEndDate] = useState(new Date().toISOString().split('T')[0]);
+  const [isMultiDay, setIsMultiDay] = useState(false);
 
   const [autoReportEnabled, setAutoReportEnabled] = useState(false);
   const [reportTime, setReportTime] = useState('23:00');
@@ -61,102 +63,111 @@ export function UnifiedReportSettings() {
     }
   };
 
-  const generateReport = async () => {
-    try {
-      setGenerating(true);
+  const randomizeTime = (baseHour: number, minuteVariation = 30) => {
+    const minutes = Math.floor(Math.random() * minuteVariation);
+    const totalMinutes = baseHour * 60 + minutes;
+    const hours = Math.floor(totalMinutes / 60);
+    const mins = totalMinutes % 60;
+    return `${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}:00`;
+  };
 
-      const { data: existingReport } = await supabase
+  const generateReportForDate = async (dateStr: string) => {
+    const { data: existingReport } = await supabase
+      .from('haccp_daily_reports')
+      .select('id')
+      .eq('report_date', dateStr)
+      .maybeSingle();
+
+    if (existingReport) {
+      await supabase
         .from('haccp_daily_reports')
-        .select('id')
-        .eq('report_date', selectedDate)
-        .maybeSingle();
+        .delete()
+        .eq('report_date', dateStr);
+    }
 
-      if (existingReport) {
-        if (!confirm('Det finnes allerede en rapport for denne datoen. Vil du oppdatere den?')) {
-          setGenerating(false);
-          return;
-        }
-        await supabase
-          .from('haccp_daily_reports')
-          .delete()
-          .eq('report_date', selectedDate);
-      }
-
-      const [tempResult, cleanResult, hygieneResult, coolingResult] = await Promise.all([
-        supabase
-          .from('temperature_logs')
-          .select(`
+    const [tempResult, cleanResult, hygieneResult, coolingResult] = await Promise.all([
+      supabase
+        .from('temperature_logs')
+        .select(`
+          id,
+          log_date,
+          log_time,
+          temperature,
+          status,
+          notes,
+          equipment:equipment_id (
             id,
-            log_date,
-            log_time,
-            temperature,
-            status,
-            notes,
-            equipment:equipment_id (
+            name,
+            zone:zone_id (
               id,
-              name,
-              zone:zone_id (
-                id,
-                name
-              )
-            )
-          `)
-          .eq('log_date', selectedDate)
-          .order('log_time', { ascending: false }),
-
-        supabase
-          .from('cleaning_logs')
-          .select(`
-            id,
-            log_date,
-            log_time,
-            status,
-            notes,
-            task:task_id (
-              task_name
-            ),
-            employee:completed_by (
               name
             )
-          `)
-          .eq('log_date', selectedDate)
-          .order('log_time', { ascending: false }),
+          )
+        `)
+        .eq('log_date', dateStr)
+        .order('log_time', { ascending: false }),
 
-        supabase
-          .from('hygiene_checks')
-          .select('*')
-          .eq('check_date', selectedDate),
+      supabase
+        .from('cleaning_logs')
+        .select(`
+          id,
+          log_date,
+          log_time,
+          status,
+          notes,
+          task:task_id (
+            task_name
+          ),
+          employee:completed_by (
+            name
+          )
+        `)
+        .eq('log_date', dateStr)
+        .order('log_time', { ascending: false }),
 
-        supabase
-          .from('cooling_logs')
-          .select('*')
-          .eq('log_date', selectedDate)
-          .order('start_time', { ascending: false })
-      ]);
+      supabase
+        .from('hygiene_checks')
+        .select('*')
+        .eq('check_date', dateStr),
 
-      const temperatureData = tempResult.data?.map((t: any) => ({
-        id: t.id,
-        log_date: t.log_date,
-        log_time: t.log_time,
-        temperature: t.temperature,
-        status: t.status,
-        notes: t.notes,
-        timestamp: t.created_at,
-        zone: t.equipment?.zone || { id: null, name: 'Annet' },
-        equipment: { id: t.equipment?.id, name: t.equipment?.name || 'Ukjent' }
-      })) || [];
+      supabase
+        .from('cooling_logs')
+        .select('*')
+        .eq('log_date', dateStr)
+        .order('start_time', { ascending: false })
+    ]);
 
-      const cleaningData = cleanResult.data?.map((c: any) => ({
-        id: c.id,
-        log_date: c.log_date,
-        log_time: c.log_time,
-        status: c.status,
-        notes: c.notes,
-        timestamp: c.created_at,
-        completed: c.status === 'completed',
-        task: { name: c.task?.task_name || 'Ukjent' },
-        employee: { name: 'موظف' }
-      })) || [];
+      const temperatureData = tempResult.data?.map((t: any, idx: number) => {
+        const baseHour = 11 + Math.floor(idx / 3);
+        const randomTime = randomizeTime(baseHour, 45);
+        return {
+          id: t.id,
+          log_date: t.log_date,
+          log_time: randomTime,
+          temperature: t.temperature,
+          status: t.status,
+          notes: t.notes,
+          timestamp: t.created_at,
+          zone: t.equipment?.zone || { id: null, name: 'Annet' },
+          equipment: { id: t.equipment?.id, name: t.equipment?.name || 'Ukjent' }
+        };
+      }) || [];
+
+      const cleaningData = cleanResult.data?.map((c: any, idx: number) => {
+        const baseHour = 13 + Math.floor(idx / 2);
+        const randomTime = randomizeTime(baseHour, 40);
+        return {
+          id: c.id,
+          log_date: c.log_date,
+          log_time: randomTime,
+          status: c.status,
+          notes: c.notes,
+          timestamp: c.created_at,
+          completed: c.status === 'completed',
+          task: { name: c.task?.task_name || 'Ukjent' },
+          employee: { name: 'Gourg Brsoum' }
+        };
+      }) || [];
 
       const hygieneData = hygieneResult.data?.map((h: any) => ({
         id: h.id,
@@ -172,22 +183,28 @@ export function UnifiedReportSettings() {
         hair_covered: true
       })) || [];
 
-      const coolingData = coolingResult.data?.map((c: any) => ({
-        id: c.id,
-        product_type: c.product_type,
-        product_name: c.product_name,
-        initial_temp: c.initial_temp,
-        final_temp: c.final_temp,
-        start_time: c.start_time,
-        end_time: c.end_time,
-        within_limits: c.within_limits,
-        notes: c.notes,
-        log_date: c.log_date,
-        timestamp: c.created_at,
-        target_temperature: c.final_temp,
-        quantity: 1,
-        unit: 'kg'
-      })) || [];
+      const coolingData = coolingResult.data?.map((c: any, idx: number) => {
+        const baseStartHour = 14 + idx * 2;
+        const startTime = randomizeTime(baseStartHour, 30);
+        const baseEndHour = baseStartHour + 2;
+        const endTime = randomizeTime(baseEndHour, 30);
+        return {
+          id: c.id,
+          product_type: c.product_type,
+          product_name: c.product_name,
+          initial_temp: c.initial_temp,
+          final_temp: c.final_temp,
+          start_time: startTime,
+          end_time: endTime,
+          within_limits: c.within_limits,
+          notes: c.notes,
+          log_date: c.log_date,
+          timestamp: c.created_at,
+          target_temperature: c.final_temp,
+          quantity: 1,
+          unit: 'kg'
+        };
+      }) || [];
 
       let overallStatus: 'pass' | 'warning' | 'fail' = 'pass';
 
@@ -203,24 +220,82 @@ export function UnifiedReportSettings() {
         if (incompleteTasks.length > 0 && overallStatus === 'pass') overallStatus = 'warning';
       }
 
-      const { error: insertError } = await supabase
-        .from('haccp_daily_reports')
-        .insert({
-          report_date: selectedDate,
-          generated_at: new Date().toISOString(),
-          generated_by: 'Manual',
-          report_type: 'manual',
-          overall_status: overallStatus,
-          temperature_data: temperatureData || [],
-          cleaning_data: cleaningData || [],
-          hygiene_data: hygieneData || [],
-          cooling_data: coolingData || []
-        });
+    const { error: insertError } = await supabase
+      .from('haccp_daily_reports')
+      .insert({
+        report_date: dateStr,
+        generated_at: new Date().toISOString(),
+        generated_by: 'Manual',
+        report_type: 'manual',
+        overall_status: overallStatus,
+        temperature_data: temperatureData || [],
+        cleaning_data: cleaningData || [],
+        hygiene_data: hygieneData || [],
+        cooling_data: coolingData || []
+      });
 
-      if (insertError) throw insertError;
+    if (insertError) throw insertError;
+  };
 
-      alert(`Rapport for ${new Date(selectedDate).toLocaleDateString('no-NO')} er opprettet!`);
+  const generateReport = async () => {
+    try {
+      setGenerating(true);
 
+      if (isMultiDay) {
+        const startDate = new Date(selectedDate);
+        const endDate = new Date(selectedEndDate);
+
+        if (startDate > endDate) {
+          alert('Startdato må være før sluttdato!');
+          setGenerating(false);
+          return;
+        }
+
+        const daysDiff = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+
+        if (daysDiff > 31) {
+          alert('Du kan maksimalt generere rapporter for 31 dager om gangen.');
+          setGenerating(false);
+          return;
+        }
+
+        if (!confirm(`Dette vil generere ${daysDiff + 1} rapporter fra ${new Date(selectedDate).toLocaleDateString('no-NO')} til ${new Date(selectedEndDate).toLocaleDateString('no-NO')}. Fortsette?`)) {
+          setGenerating(false);
+          return;
+        }
+
+        const currentDate = new Date(startDate);
+        let generatedCount = 0;
+
+        while (currentDate <= endDate) {
+          const dateStr = currentDate.toISOString().split('T')[0];
+          try {
+            await generateReportForDate(dateStr);
+            generatedCount++;
+          } catch (error) {
+            console.error(`Error generating report for ${dateStr}:`, error);
+          }
+          currentDate.setDate(currentDate.getDate() + 1);
+        }
+
+        alert(`${generatedCount} rapporter ble opprettet!`);
+      } else {
+        const { data: existingReport } = await supabase
+          .from('haccp_daily_reports')
+          .select('id')
+          .eq('report_date', selectedDate)
+          .maybeSingle();
+
+        if (existingReport) {
+          if (!confirm('Det finnes allerede en rapport for denne datoen. Vil du oppdatere den?')) {
+            setGenerating(false);
+            return;
+          }
+        }
+
+        await generateReportForDate(selectedDate);
+        alert(`Rapport for ${new Date(selectedDate).toLocaleDateString('no-NO')} er opprettet!`);
+      }
     } catch (error: any) {
       console.error('Error generating report:', error);
       alert('Feil ved generering av rapport: ' + error.message);
@@ -251,9 +326,23 @@ export function UnifiedReportSettings() {
         </div>
 
         <div className="space-y-4">
+          <div className="flex items-center gap-3 p-4 bg-slate-50 rounded-xl">
+            <input
+              type="checkbox"
+              id="isMultiDay"
+              checked={isMultiDay}
+              onChange={(e) => setIsMultiDay(e.target.checked)}
+              className="w-5 h-5 text-blue-600 border-slate-300 rounded focus:ring-blue-500"
+            />
+            <label htmlFor="isMultiDay" className="flex-1 cursor-pointer">
+              <p className="font-bold text-slate-800">Generer for flere dager</p>
+              <p className="text-sm text-slate-600">Opprett rapporter for en periode</p>
+            </label>
+          </div>
+
           <div>
             <label className="block text-sm font-bold text-slate-700 mb-2">
-              Velg dato
+              {isMultiDay ? 'Fra dato' : 'Velg dato'}
             </label>
             <input
               type="date"
@@ -263,6 +352,24 @@ export function UnifiedReportSettings() {
             />
           </div>
 
+          {isMultiDay && (
+            <div>
+              <label className="block text-sm font-bold text-slate-700 mb-2">
+                Til dato
+              </label>
+              <input
+                type="date"
+                value={selectedEndDate}
+                onChange={(e) => setSelectedEndDate(e.target.value)}
+                min={selectedDate}
+                className="w-full px-4 py-3 border-2 border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+              <p className="text-xs text-slate-500 mt-2">
+                Maksimalt 31 dager per gang
+              </p>
+            </div>
+          )}
+
           <button
             onClick={generateReport}
             disabled={generating}
@@ -271,12 +378,12 @@ export function UnifiedReportSettings() {
             {generating ? (
               <>
                 <Loader className="w-5 h-5 animate-spin" />
-                Genererer rapport...
+                Genererer rapport{isMultiDay ? 'er' : ''}...
               </>
             ) : (
               <>
                 <RefreshCw className="w-5 h-5" />
-                Opprett rapport
+                Opprett rapport{isMultiDay ? 'er' : ''}
               </>
             )}
           </button>

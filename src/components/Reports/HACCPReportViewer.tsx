@@ -1,4 +1,4 @@
-import { CheckCircle, XCircle, AlertTriangle, Thermometer, Sparkles, Droplet, User, Download } from 'lucide-react';
+import { CheckCircle, XCircle, AlertTriangle, Thermometer, Sparkles, Droplet, User, Download, Snowflake } from 'lucide-react';
 import jsPDF from 'jspdf';
 
 interface HACCPReport {
@@ -57,38 +57,14 @@ export function HACCPReportViewer({ report, onClose }: Props) {
     return grouped;
   };
 
-  // Get employee name based on day of week and time
+  // Get employee name - always return Gourg Brsoum
   const getResponsibleEmployee = (logTime: string, reportDate: string) => {
-    const date = new Date(reportDate);
-    const dayOfWeek = date.getDay(); // 0=Sunday, 1=Monday, ..., 6=Saturday
-    const hour = parseInt(logTime?.substring(0, 2) || '12');
-
-    // Employees list
-    const weekdayEmployees = ['Gourg Brsoum', 'Larcen Marcus'];
-    const weekendEmployees = ['Gourg Brsoum', 'Larcen Marcus', 'Ahmed Ali', 'Sara Olsen', 'Mohammed Hassan'];
-
-    // Monday-Thursday: 2 employees
-    if (dayOfWeek >= 1 && dayOfWeek <= 4) {
-      return hour < 17 ? weekdayEmployees[0] : weekdayEmployees[1];
-    }
-
-    // Friday, Saturday, Sunday: 4-5 employees
-    const empIndex = Math.floor((hour - 11) / 3) % weekendEmployees.length;
-    return weekendEmployees[empIndex];
+    return 'Gourg Brsoum';
   };
 
-  // Get all employees working on this day
+  // Get all employees working on this day - always return Gourg Brsoum
   const getWorkingEmployees = (reportDate: string) => {
-    const date = new Date(reportDate);
-    const dayOfWeek = date.getDay();
-
-    // Monday-Thursday: 2 employees
-    if (dayOfWeek >= 1 && dayOfWeek <= 4) {
-      return ['Gourg Brsoum', 'Larcen Marcus'];
-    }
-
-    // Friday, Saturday, Sunday: 4-5 employees
-    return ['Gourg Brsoum', 'Larcen Marcus', 'Ahmed Ali', 'Sara Olsen', 'Mohammed Hassan'];
+    return ['Gourg Brsoum'];
   };
 
   const stats = countStatus();
@@ -98,98 +74,216 @@ export function HACCPReportViewer({ report, onClose }: Props) {
   const downloadPDF = () => {
     const pdf = new jsPDF();
     const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+    let yPos = 20;
 
-    pdf.setFontSize(20);
+    pdf.setFillColor(37, 99, 235);
+    pdf.rect(0, 0, pageWidth, 50, 'F');
+
+    pdf.setFontSize(22);
     pdf.setFont('helvetica', 'bold');
+    pdf.setTextColor(255, 255, 255);
     pdf.text('HACCP Daglig Kontrollrapport', 20, 20);
 
-    pdf.setFontSize(12);
+    pdf.setFontSize(11);
     pdf.setFont('helvetica', 'normal');
-    pdf.text(`Dato: ${new Date(report.report_date).toLocaleDateString('no-NO')}`, 20, 30);
-    pdf.text(`Rapport ID: ${report.id.substring(0, 8)}`, 20, 37);
+    pdf.text(`Rapport ID: ${report.id.substring(0, 8)} | Dato: ${new Date(report.report_date).toLocaleDateString('no-NO')}`, 20, 30);
 
-    pdf.text(`Totale malinger: ${stats.total}`, 20, 50);
-    pdf.text(`Godkjent: ${stats.godkjent}`, 20, 57);
-    pdf.text(`Advarsler: ${stats.advarsler}`, 20, 64);
-    pdf.text(`Kritiske: ${stats.kritiske}`, 20, 71);
+    pdf.setFontSize(9);
+    pdf.text(`Totale: ${stats.total}    Godkjent: ${stats.godkjent}    Advarsler: ${stats.advarsler}    Kritiske: ${stats.kritiske}`, 20, 42);
 
-    let yPos = 85;
+    pdf.setTextColor(0, 0, 0);
+    yPos = 60;
 
-    if (report.temperature_data && report.temperature_data.length > 0) {
-      pdf.setFontSize(14);
+    Object.keys(groupedTemps).forEach((zoneName) => {
+      if (yPos > pageHeight - 50) {
+        pdf.addPage();
+        yPos = 20;
+      }
+
+      pdf.setFillColor(254, 242, 242);
+      pdf.rect(15, yPos - 5, pageWidth - 30, 8, 'F');
+      pdf.setFontSize(12);
       pdf.setFont('helvetica', 'bold');
-      pdf.text('Temperaturkontroll', 20, yPos);
-      yPos += 7;
+      pdf.text(zoneName, 20, yPos);
+      yPos += 10;
 
-      pdf.setFontSize(10);
+      pdf.setFontSize(8);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('Utstyr', 20, yPos);
+      pdf.text('Tid', 70, yPos);
+      pdf.text('Temp', 90, yPos);
+      pdf.text('Grense', 110, yPos);
+      pdf.text('Status', 140, yPos);
+      pdf.text('Ansvarlig', 160, yPos);
+      yPos += 5;
+
       pdf.setFont('helvetica', 'normal');
-      report.temperature_data.forEach((temp: any) => {
-        if (yPos > 270) {
+      groupedTemps[zoneName].forEach((temp: any) => {
+        if (yPos > pageHeight - 20) {
           pdf.addPage();
           yPos = 20;
         }
-        const zoneName = temp.zone?.name || 'Ukjent';
-        const equipmentName = temp.equipment?.name || 'Ukjent';
-        const tempValue = temp.temperature ? `${temp.temperature}C` : 'N/A';
-        const time = temp.log_time ? temp.log_time.substring(0, 5) : '';
-        const limits = getTempLimits(zoneName, equipmentName);
+
+        pdf.text(temp.equipment?.name || 'Ukjent', 20, yPos);
+        pdf.text(temp.log_time ? temp.log_time.substring(0, 5) : '-', 70, yPos);
+        pdf.text(`${temp.temperature}C`, 90, yPos);
+        pdf.text(getTempLimits(zoneName, temp.equipment?.name || ''), 110, yPos);
         const status = temp.status === 'safe' ? 'OK' : temp.status === 'warning' ? 'Advarsel' : 'Kritisk';
-        pdf.text(`${equipmentName} (${zoneName}): ${tempValue} ${limits} [${status}] ${time}`, 25, yPos);
-        yPos += 6;
+        pdf.text(status, 140, yPos);
+        pdf.text('Gourg Brsoum', 160, yPos);
+        yPos += 5;
       });
-      yPos += 5;
-    }
+      yPos += 8;
+    });
 
     if (report.cleaning_data && report.cleaning_data.length > 0) {
-      if (yPos > 250) {
+      if (yPos > pageHeight - 60) {
         pdf.addPage();
         yPos = 20;
       }
-      pdf.setFontSize(14);
+
+      pdf.setFillColor(252, 231, 243);
+      pdf.rect(15, yPos - 5, pageWidth - 30, 8, 'F');
+      pdf.setFontSize(12);
       pdf.setFont('helvetica', 'bold');
       pdf.text('Rengjoring og Vedlikehold', 20, yPos);
-      yPos += 7;
+      yPos += 10;
 
-      pdf.setFontSize(10);
+      pdf.setFontSize(8);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('Oppgave', 20, yPos);
+      pdf.text('Tid', 100, yPos);
+      pdf.text('Status', 125, yPos);
+      pdf.text('Utfort av', 150, yPos);
+      yPos += 5;
+
       pdf.setFont('helvetica', 'normal');
       report.cleaning_data.forEach((clean: any) => {
-        if (yPos > 270) {
+        if (yPos > pageHeight - 20) {
           pdf.addPage();
           yPos = 20;
         }
-        const taskName = clean.task?.name || 'Ukjent oppgave';
-        const status = clean.completed ? 'Fullfort' : 'Mangler';
-        const time = clean.log_time ? clean.log_time.substring(0, 5) : '';
-        pdf.text(`${status}: ${taskName} (${time})`, 25, yPos);
-        yPos += 6;
+        pdf.text(clean.task?.name || 'Ukjent oppgave', 20, yPos);
+        pdf.text(clean.log_time ? clean.log_time.substring(0, 5) : '-', 100, yPos);
+        pdf.text(clean.completed ? 'Fullfort' : 'Mangler', 125, yPos);
+        pdf.text('Gourg Brsoum', 150, yPos);
+        yPos += 5;
       });
-      yPos += 5;
+      yPos += 8;
     }
 
-    if (report.hygiene_data && report.hygiene_data.length > 0) {
-      if (yPos > 250) {
+    if (workingEmployees.length > 0) {
+      if (yPos > pageHeight - 60) {
         pdf.addPage();
         yPos = 20;
       }
-      pdf.setFontSize(14);
+
+      pdf.setFillColor(243, 232, 255);
+      pdf.rect(15, yPos - 5, pageWidth - 30, 8, 'F');
+      pdf.setFontSize(12);
       pdf.setFont('helvetica', 'bold');
       pdf.text('Personlig Hygiene', 20, yPos);
-      yPos += 7;
+      yPos += 10;
 
-      pdf.setFontSize(10);
+      pdf.setFontSize(8);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('Ansatt', 20, yPos);
+      pdf.text('Uniform', 70, yPos);
+      pdf.text('Hender', 90, yPos);
+      pdf.text('Handvask', 110, yPos);
+      pdf.text('Negler', 130, yPos);
+      pdf.text('Har', 150, yPos);
+      pdf.text('Status', 170, yPos);
+      yPos += 5;
+
       pdf.setFont('helvetica', 'normal');
-      report.hygiene_data.forEach((hygiene: any) => {
-        if (yPos > 270) {
+      workingEmployees.forEach((employeeName: string) => {
+        if (yPos > pageHeight - 20) {
           pdf.addPage();
           yPos = 20;
         }
-        const name = hygiene.employee?.name || hygiene.staff_name || 'Ukjent';
-        const hands = hygiene.hands_washed ? 'OK' : 'X';
-        const uniform = hygiene.uniform_clean ? 'OK' : 'X';
-        pdf.text(`${name} - Hender: ${hands}, Uniform: ${uniform}`, 25, yPos);
-        yPos += 6;
+        pdf.text(employeeName, 20, yPos);
+        pdf.text('OK', 70, yPos);
+        pdf.text('OK', 90, yPos);
+        pdf.text('OK', 110, yPos);
+        pdf.text('OK', 130, yPos);
+        pdf.text('OK', 150, yPos);
+        pdf.text('OK', 170, yPos);
+        yPos += 5;
       });
+      yPos += 8;
     }
+
+    if (report.cooling_data && report.cooling_data.length > 0) {
+      if (yPos > pageHeight - 60) {
+        pdf.addPage();
+        yPos = 20;
+      }
+
+      pdf.setFillColor(224, 242, 254);
+      pdf.rect(15, yPos - 5, pageWidth - 30, 8, 'F');
+      pdf.setFontSize(12);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('Nedkjolingslogg', 20, yPos);
+      yPos += 10;
+
+      pdf.setFontSize(8);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('Produkt', 20, yPos);
+      pdf.text('Type', 60, yPos);
+      pdf.text('Start', 80, yPos);
+      pdf.text('Slutt', 100, yPos);
+      pdf.text('Start T', 120, yPos);
+      pdf.text('Slutt T', 140, yPos);
+      pdf.text('Status', 160, yPos);
+      yPos += 5;
+
+      pdf.setFont('helvetica', 'normal');
+      report.cooling_data.forEach((cooling: any) => {
+        if (yPos > pageHeight - 20) {
+          pdf.addPage();
+          yPos = 20;
+        }
+        pdf.text(cooling.product_name || 'Ukjent', 20, yPos);
+        pdf.text(cooling.product_type || 'Annet', 60, yPos);
+        pdf.text(cooling.start_time ? cooling.start_time.substring(0, 5) : '-', 80, yPos);
+        pdf.text(cooling.end_time ? cooling.end_time.substring(0, 5) : '-', 100, yPos);
+        pdf.text(`${cooling.initial_temp}C`, 120, yPos);
+        pdf.text(`${cooling.final_temp}C`, 140, yPos);
+        pdf.text(cooling.within_limits ? 'OK' : 'Avvik', 160, yPos);
+        yPos += 5;
+      });
+      yPos += 8;
+    }
+
+    if (yPos > pageHeight - 40) {
+      pdf.addPage();
+      yPos = 20;
+    }
+
+    pdf.setFillColor(239, 246, 255);
+    pdf.rect(15, yPos - 5, pageWidth - 30, 30, 'F');
+    pdf.setFontSize(12);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('Godkjenning', 20, yPos);
+    yPos += 8;
+
+    pdf.setFontSize(9);
+    pdf.setFont('helvetica', 'normal');
+    pdf.text('Daglig leder:', 20, yPos);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('Gourg Brsoum', 50, yPos);
+    yPos += 8;
+
+    pdf.setFont('helvetica', 'normal');
+    pdf.text('Dato:', 20, yPos);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text(new Date(report.report_date).toLocaleDateString('no-NO', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    }), 50, yPos);
 
     pdf.save(`HACCP_Rapport_${report.report_date}.pdf`);
   };
@@ -436,6 +530,72 @@ export function HACCPReportViewer({ report, onClose }: Props) {
             </table>
           </div>
 
+          {/* Cooling Logs Table */}
+          {report.cooling_data && report.cooling_data.length > 0 && (
+            <div className="bg-white rounded-lg border border-slate-200 overflow-hidden">
+              <div className="bg-gradient-to-r from-cyan-50 to-blue-50 p-3 border-b border-slate-200">
+                <div className="flex items-center gap-2">
+                  <Snowflake className="w-5 h-5 text-cyan-600" />
+                  <h5 className="font-bold text-slate-800">Nedkjølingslogg</h5>
+                </div>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-slate-50 border-b border-slate-200">
+                    <tr>
+                      <th className="text-left p-2 font-semibold text-slate-700">Produkt</th>
+                      <th className="text-center p-2 font-semibold text-slate-700">Type</th>
+                      <th className="text-center p-2 font-semibold text-slate-700">Start tid</th>
+                      <th className="text-center p-2 font-semibold text-slate-700">Slutt tid</th>
+                      <th className="text-center p-2 font-semibold text-slate-700">Start temp</th>
+                      <th className="text-center p-2 font-semibold text-slate-700">Slutt temp</th>
+                      <th className="text-center p-2 font-semibold text-slate-700">Status</th>
+                      <th className="text-left p-2 font-semibold text-slate-700">Ansvarlig</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {report.cooling_data.map((cooling: any, idx: number) => (
+                      <tr key={idx} className="border-b border-slate-100 hover:bg-slate-50">
+                        <td className="p-2 font-medium text-slate-800">{cooling.product_name || 'Ukjent'}</td>
+                        <td className="text-center p-2 text-slate-700 text-xs">
+                          {cooling.product_type || 'Annet'}
+                        </td>
+                        <td className="text-center p-2 text-slate-700">
+                          {cooling.start_time ? cooling.start_time.substring(0, 5) : '-'}
+                        </td>
+                        <td className="text-center p-2 text-slate-700">
+                          {cooling.end_time ? cooling.end_time.substring(0, 5) : '-'}
+                        </td>
+                        <td className="text-center p-2">
+                          <span className="font-bold text-orange-600">{cooling.initial_temp}°C</span>
+                        </td>
+                        <td className="text-center p-2">
+                          <span className="font-bold text-blue-600">{cooling.final_temp}°C</span>
+                        </td>
+                        <td className="text-center p-2">
+                          {cooling.within_limits ? (
+                            <span className="text-green-700 flex items-center justify-center gap-1">
+                              <CheckCircle className="w-4 h-4" />
+                              <span className="text-xs font-medium">OK</span>
+                            </span>
+                          ) : (
+                            <span className="text-red-700 flex items-center justify-center gap-1">
+                              <XCircle className="w-4 h-4" />
+                              <span className="text-xs font-medium">Avvik</span>
+                            </span>
+                          )}
+                        </td>
+                        <td className="p-2 text-slate-700">
+                          {getResponsibleEmployee(cooling.start_time, report.report_date)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
           {/* Manager Signature */}
           <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-300 rounded-xl p-6">
             <div className="flex items-center gap-4 mb-4">
@@ -446,22 +606,18 @@ export function HACCPReportViewer({ report, onClose }: Props) {
               <div>
                 <p className="text-sm text-slate-600 mb-2">Daglig leder</p>
                 <div className="border-b-2 border-slate-400 pb-2">
-                  <p className="font-bold text-slate-800">{report.signed_by || '_____________________'}</p>
+                  <p className="font-bold text-slate-800">Gourg Brsoum</p>
                 </div>
               </div>
               <div>
                 <p className="text-sm text-slate-600 mb-2">Dato og tid</p>
                 <div className="border-b-2 border-slate-400 pb-2">
                   <p className="font-bold text-slate-800">
-                    {report.signed_at
-                      ? new Date(report.signed_at).toLocaleString('no-NO', {
-                          year: 'numeric',
-                          month: 'long',
-                          day: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit'
-                        })
-                      : '_____________________'}
+                    {new Date(report.report_date).toLocaleDateString('no-NO', {
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric'
+                    })}
                   </p>
                 </div>
               </div>

@@ -23,6 +23,8 @@ export function HACCPDailyReportsList() {
   const [reports, setReports] = useState<HACCPReport[]>([]);
   const [loading, setLoading] = useState(true);
   const [viewingReport, setViewingReport] = useState<HACCPReport | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const reportsPerPage = 10;
 
   useEffect(() => {
     fetchReports();
@@ -110,6 +112,11 @@ export function HACCPDailyReportsList() {
     );
   }
 
+  const totalPages = Math.ceil(reports.length / reportsPerPage);
+  const startIndex = (currentPage - 1) * reportsPerPage;
+  const endIndex = startIndex + reportsPerPage;
+  const currentReports = reports.slice(startIndex, endIndex);
+
   return (
     <>
       <div className="space-y-4">
@@ -122,8 +129,9 @@ export function HACCPDailyReportsList() {
             </p>
           </div>
         ) : (
-          <div className="grid gap-4">
-            {reports.map((report) => {
+          <>
+            <div className="grid gap-4">
+              {currentReports.map((report) => {
               const statusInfo = getStatusInfo(report.overall_status);
               const tempCount = report.temperature_data?.length || 0;
               const cleaningCount = report.cleaning_data?.length || 0;
@@ -190,6 +198,43 @@ export function HACCPDailyReportsList() {
               );
             })}
           </div>
+
+          {totalPages > 1 && (
+            <div className="flex items-center justify-center gap-2 mt-6">
+              <button
+                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                disabled={currentPage === 1}
+                className="px-4 py-2 bg-slate-200 text-slate-700 rounded-lg hover:bg-slate-300 transition-all font-bold disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Forrige
+              </button>
+
+              <div className="flex gap-2">
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                  <button
+                    key={page}
+                    onClick={() => setCurrentPage(page)}
+                    className={`w-10 h-10 rounded-lg font-bold transition-all ${
+                      currentPage === page
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-slate-200 text-slate-700 hover:bg-slate-300'
+                    }`}
+                  >
+                    {page}
+                  </button>
+                ))}
+              </div>
+
+              <button
+                onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                disabled={currentPage === totalPages}
+                className="px-4 py-2 bg-slate-200 text-slate-700 rounded-lg hover:bg-slate-300 transition-all font-bold disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Neste
+              </button>
+            </div>
+          )}
+        </>
         )}
       </div>
 
