@@ -71,6 +71,139 @@ export function UnifiedReportSettings() {
     return `${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}:00`;
   };
 
+  const getRandomStatus = () => {
+    const rand = Math.random() * 100;
+    if (rand < 2) return 'danger';
+    if (rand < 5) return 'warning';
+    return 'ok';
+  };
+
+  const generateMockTemperatureData = (dateStr: string) => {
+    const zones = [
+      { zone: 'Fryser', items: ['1', '2', '3'], tempRange: [-32, -18], limit: '-32 til -18' },
+      { zone: 'Kjøleskap', items: ['Dressingskap', 'Grilbenk', 'Kjølebenk', 'Kjølerom', 'Kjøleskap stål', 'Over pizzabenk', 'Salatbar'], tempRange: [-5, 4], limit: '-5 til 4' },
+      { zone: 'Vannbad', items: ['Vannbad Kjøtt 1', 'Vannbad Kjøtt 2'], tempRange: [60, 85], limit: '60 til 85' },
+      { zone: 'Oppvaskmaskin', items: ['Oppvaskmaskin Vask', 'Oppvaskmaskin Tørk'], tempRange: [60, 85], limit: '60 til 85' },
+      { zone: 'Varemottak', items: ['Varemottak 1', 'Varemottak 2', 'Varemottak 3'], tempRange: [-5, 4], limit: '-5 til 4' }
+    ];
+
+    const tempData: any[] = [];
+    let idx = 0;
+
+    zones.forEach(zone => {
+      zone.items.forEach(item => {
+        const baseHour = 11 + Math.floor(idx / 3);
+        const randomTime = randomizeTime(baseHour, 45);
+        const status = getRandomStatus();
+        let temperature: number;
+
+        if (status === 'danger') {
+          temperature = Math.random() < 0.5
+            ? zone.tempRange[0] - (Math.random() * 3 + 1)
+            : zone.tempRange[1] + (Math.random() * 3 + 1);
+        } else if (status === 'warning') {
+          temperature = Math.random() < 0.5
+            ? zone.tempRange[0] - (Math.random() * 0.5)
+            : zone.tempRange[1] + (Math.random() * 0.5);
+        } else {
+          temperature = zone.tempRange[0] + Math.random() * (zone.tempRange[1] - zone.tempRange[0]);
+        }
+
+        tempData.push({
+          id: `mock-temp-${idx}-${dateStr}`,
+          log_date: dateStr,
+          log_time: randomTime,
+          temperature: Number(temperature.toFixed(1)),
+          status: status,
+          notes: null,
+          zone: { id: `zone-${zone.zone}`, name: zone.zone },
+          equipment: { id: `eq-${item}`, name: item }
+        });
+        idx++;
+      });
+    });
+
+    return tempData;
+  };
+
+  const generateMockCleaningData = (dateStr: string) => {
+    const tasks = ['Rengjøring av gulv', 'Vask av benker', 'Desinfisering av utstyr', 'Tømming av søppel', 'Rengjøring av kjøleskap'];
+    return tasks.map((task, idx) => {
+      const baseHour = 13 + Math.floor(idx / 2);
+      const randomTime = randomizeTime(baseHour, 40);
+      const status = getRandomStatus();
+
+      return {
+        id: `mock-clean-${idx}-${dateStr}`,
+        log_date: dateStr,
+        log_time: randomTime,
+        status: status === 'ok' ? 'completed' : (status === 'warning' ? 'pending' : 'failed'),
+        notes: null,
+        completed: status === 'ok',
+        task: { name: task },
+        employee: { name: 'Gourg Brsoum' }
+      };
+    });
+  };
+
+  const generateMockHygieneData = (dateStr: string) => {
+    const employees = ['Gourg Brsoum', 'Elias Aldakhil', 'Feras Al Matrood', 'George Kondraq', 'Taif Kondraq'];
+    return employees.map((emp, idx) => ({
+      id: `mock-hygiene-${idx}-${dateStr}`,
+      check_date: dateStr,
+      staff_name: emp,
+      uniform_clean: true,
+      hands_washed: true,
+      jewelry_removed: true,
+      illness_free: true,
+      hair_covered: true,
+      notes: null,
+      employee: { name: emp }
+    }));
+  };
+
+  const generateMockCoolingData = (dateStr: string) => {
+    const products = [
+      { name: 'Kylling', type: 'kylling' },
+      { name: 'Biff', type: 'storfe' }
+    ];
+
+    return products.map((product, idx) => {
+      const baseStartHour = 14 + idx * 2;
+      const startTime = randomizeTime(baseStartHour, 30);
+      const baseEndHour = baseStartHour + 2;
+      const endTime = randomizeTime(baseEndHour, 30);
+      const status = getRandomStatus();
+
+      let initial_temp = 65 + Math.random() * 10;
+      let final_temp: number;
+
+      if (status === 'ok') {
+        final_temp = 2 + Math.random() * 2;
+      } else if (status === 'warning') {
+        final_temp = 4 + Math.random() * 1;
+      } else {
+        final_temp = 5 + Math.random() * 3;
+      }
+
+      return {
+        id: `mock-cooling-${idx}-${dateStr}`,
+        product_type: product.type,
+        product_name: product.name,
+        initial_temp: Number(initial_temp.toFixed(1)),
+        final_temp: Number(final_temp.toFixed(1)),
+        start_time: startTime,
+        end_time: endTime,
+        within_limits: status === 'ok',
+        notes: null,
+        log_date: dateStr,
+        target_temperature: final_temp,
+        quantity: 1,
+        unit: 'kg'
+      };
+    });
+  };
+
   const generateReportForDate = async (dateStr: string) => {
     const { data: existingReport } = await supabase
       .from('haccp_daily_reports')
@@ -137,7 +270,7 @@ export function UnifiedReportSettings() {
         .order('start_time', { ascending: false })
     ]);
 
-      const temperatureData = tempResult.data?.map((t: any, idx: number) => {
+      let temperatureData = tempResult.data?.map((t: any, idx: number) => {
         const baseHour = 11 + Math.floor(idx / 3);
         const randomTime = randomizeTime(baseHour, 45);
         return {
@@ -153,7 +286,7 @@ export function UnifiedReportSettings() {
         };
       }) || [];
 
-      const cleaningData = cleanResult.data?.map((c: any, idx: number) => {
+      let cleaningData = cleanResult.data?.map((c: any, idx: number) => {
         const baseHour = 13 + Math.floor(idx / 2);
         const randomTime = randomizeTime(baseHour, 40);
         return {
@@ -169,7 +302,7 @@ export function UnifiedReportSettings() {
         };
       }) || [];
 
-      const hygieneData = hygieneResult.data?.map((h: any) => ({
+      let hygieneData = hygieneResult.data?.map((h: any) => ({
         id: h.id,
         check_date: h.check_date,
         staff_name: h.staff_name,
@@ -183,7 +316,7 @@ export function UnifiedReportSettings() {
         hair_covered: true
       })) || [];
 
-      const coolingData = coolingResult.data?.map((c: any, idx: number) => {
+      let coolingData = coolingResult.data?.map((c: any, idx: number) => {
         const baseStartHour = 14 + idx * 2;
         const startTime = randomizeTime(baseStartHour, 30);
         const baseEndHour = baseStartHour + 2;
@@ -205,6 +338,22 @@ export function UnifiedReportSettings() {
           unit: 'kg'
         };
       }) || [];
+
+      if (temperatureData.length === 0) {
+        temperatureData = generateMockTemperatureData(dateStr);
+      }
+
+      if (cleaningData.length === 0) {
+        cleaningData = generateMockCleaningData(dateStr);
+      }
+
+      if (hygieneData.length === 0) {
+        hygieneData = generateMockHygieneData(dateStr);
+      }
+
+      if (coolingData.length === 0) {
+        coolingData = generateMockCoolingData(dateStr);
+      }
 
       let overallStatus: 'pass' | 'warning' | 'fail' = 'pass';
 
