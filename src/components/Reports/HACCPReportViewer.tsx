@@ -42,13 +42,28 @@ export function HACCPReportViewer({ report, onClose }: Props) {
     return { total, godkjent, advarsler, kritiske };
   };
 
-  // Group temperature data by zone
+  // Group temperature data by zone or equipment type
   const groupByZone = () => {
     const tempData = report.temperature_data || [];
     const grouped: { [key: string]: any[] } = {};
 
     tempData.forEach((temp: any) => {
-      const zoneName = temp.zone?.name || temp.equipment?.name || 'Ukjent';
+      let zoneName: string;
+      const equipmentName = temp.equipment?.name || '';
+
+      // Group by equipment prefix for special cases
+      if (equipmentName.startsWith('Vannbad')) {
+        zoneName = 'Vannbad';
+      } else if (equipmentName.startsWith('Oppvaskmaskin')) {
+        zoneName = 'Oppvaskmaskin';
+      } else if (equipmentName.startsWith('Varemottak')) {
+        zoneName = 'Varemottak';
+      } else if (temp.zone?.name) {
+        zoneName = temp.zone.name;
+      } else {
+        zoneName = equipmentName || 'Ukjent';
+      }
+
       if (!grouped[zoneName]) {
         grouped[zoneName] = [];
       }
@@ -61,24 +76,23 @@ export function HACCPReportViewer({ report, onClose }: Props) {
   // Get employee name based on day of week and time
   const getResponsibleEmployee = (logTime: string, reportDate: string) => {
     const date = new Date(reportDate);
-    const dayOfWeek = date.getDay(); // 0=Sunday, 1=Monday, ..., 6=Saturday
+    const dayOfWeek = date.getDay();
     const timeStr = logTime || '12:00:00';
     const hour = parseInt(timeStr.substring(0, 2));
 
-    // Employees list
-    const weekdayEmployees = ['Gourg Brsoum', 'Larcen Marcus'];
-    const weekendEmployees = ['Gourg Brsoum', 'Larcen Marcus', 'Ahmed Ali', 'Sara Olsen'];
+    // Active employees only
+    const allEmployees = ['Gourg Brsoum', 'Elias Aldakhil', 'Feras Al Matrood', 'George Kondraq', 'Taif Kondraq'];
 
     // Monday-Thursday: 2 employees
     if (dayOfWeek >= 1 && dayOfWeek <= 4) {
-      return hour < 17 ? weekdayEmployees[0] : weekdayEmployees[1];
+      return hour < 17 ? allEmployees[0] : allEmployees[1];
     }
 
     // Friday, Saturday, Sunday: 4 employees
-    if (hour < 14) return weekendEmployees[0];
-    if (hour < 17) return weekendEmployees[1];
-    if (hour < 20) return weekendEmployees[2];
-    return weekendEmployees[3];
+    if (hour < 12) return allEmployees[0];
+    if (hour < 16) return allEmployees[1];
+    if (hour < 20) return allEmployees[2];
+    return allEmployees[3];
   };
 
   // Get all employees working on this day
@@ -86,13 +100,15 @@ export function HACCPReportViewer({ report, onClose }: Props) {
     const date = new Date(reportDate);
     const dayOfWeek = date.getDay();
 
-    // Monday-Thursday: 2 employees
+    // Active employees only
+    const weekdayEmployees = ['Gourg Brsoum', 'Elias Aldakhil'];
+    const weekendEmployees = ['Gourg Brsoum', 'Elias Aldakhil', 'Feras Al Matrood', 'George Kondraq'];
+
     if (dayOfWeek >= 1 && dayOfWeek <= 4) {
-      return ['Gourg Brsoum', 'Larcen Marcus'];
+      return weekdayEmployees;
     }
 
-    // Friday, Saturday, Sunday: 4 employees
-    return ['Gourg Brsoum', 'Larcen Marcus', 'Ahmed Ali', 'Sara Olsen'];
+    return weekendEmployees;
   };
 
   const stats = countStatus();
@@ -650,11 +666,6 @@ export function HACCPReportViewer({ report, onClose }: Props) {
                 </div>
               </div>
             </div>
-            {!report.signed_by && (
-              <p className="text-xs text-orange-600 mt-3 italic">
-                * Rapporten må signeres av daglig leder for å være gyldig
-              </p>
-            )}
           </div>
         </div>
       </div>
