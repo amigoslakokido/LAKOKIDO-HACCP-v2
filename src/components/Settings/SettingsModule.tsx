@@ -2133,7 +2133,7 @@ export function SettingsModule() {
  )}
 
  {activeSection === 'report-settings' && (
- <HACCPReportSettings />
+ <UnifiedReportSettings />
  )}
  </div>
  );
