@@ -41,7 +41,59 @@ export function HACCPReportViewer({ report, onClose }: Props) {
     return { total, godkjent, advarsler, kritiske };
   };
 
+  // Group temperature data by zone
+  const groupByZone = () => {
+    const tempData = report.temperature_data || [];
+    const grouped: { [key: string]: any[] } = {};
+
+    tempData.forEach((temp: any) => {
+      const zoneName = temp.zone?.name || 'Annet';
+      if (!grouped[zoneName]) {
+        grouped[zoneName] = [];
+      }
+      grouped[zoneName].push(temp);
+    });
+
+    return grouped;
+  };
+
+  // Get employee name based on day of week and time
+  const getResponsibleEmployee = (logTime: string, reportDate: string) => {
+    const date = new Date(reportDate);
+    const dayOfWeek = date.getDay(); // 0=Sunday, 1=Monday, ..., 6=Saturday
+    const hour = parseInt(logTime?.substring(0, 2) || '12');
+
+    // Employees list
+    const weekdayEmployees = ['Gourg Brsoum', 'Larcen Marcus'];
+    const weekendEmployees = ['Gourg Brsoum', 'Larcen Marcus', 'Ahmed Ali', 'Sara Olsen', 'Mohammed Hassan'];
+
+    // Monday-Thursday: 2 employees
+    if (dayOfWeek >= 1 && dayOfWeek <= 4) {
+      return hour < 17 ? weekdayEmployees[0] : weekdayEmployees[1];
+    }
+
+    // Friday, Saturday, Sunday: 4-5 employees
+    const empIndex = Math.floor((hour - 11) / 3) % weekendEmployees.length;
+    return weekendEmployees[empIndex];
+  };
+
+  // Get all employees working on this day
+  const getWorkingEmployees = (reportDate: string) => {
+    const date = new Date(reportDate);
+    const dayOfWeek = date.getDay();
+
+    // Monday-Thursday: 2 employees
+    if (dayOfWeek >= 1 && dayOfWeek <= 4) {
+      return ['Gourg Brsoum', 'Larcen Marcus'];
+    }
+
+    // Friday, Saturday, Sunday: 4-5 employees
+    return ['Gourg Brsoum', 'Larcen Marcus', 'Ahmed Ali', 'Sara Olsen', 'Mohammed Hassan'];
+  };
+
   const stats = countStatus();
+  const groupedTemps = groupByZone();
+  const workingEmployees = getWorkingEmployees(report.report_date);
 
   const downloadPDF = () => {
     const pdf = new jsPDF();
@@ -194,13 +246,13 @@ export function HACCPReportViewer({ report, onClose }: Props) {
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-6 space-y-6">
-          {/* Temperature Table */}
-          {report.temperature_data && report.temperature_data.length > 0 && (
-            <div className="bg-white rounded-lg border border-slate-200 overflow-hidden">
+          {/* Temperature Tables - Grouped by Zone */}
+          {Object.keys(groupedTemps).map((zoneName, zoneIdx) => (
+            <div key={zoneIdx} className="bg-white rounded-lg border border-slate-200 overflow-hidden">
               <div className="bg-gradient-to-r from-red-50 to-orange-50 p-3 border-b border-slate-200">
                 <div className="flex items-center gap-2">
                   <Thermometer className="w-5 h-5 text-red-600" />
-                  <h5 className="font-bold text-slate-800">Temperaturkontroll</h5>
+                  <h5 className="font-bold text-slate-800">{zoneName}</h5>
                 </div>
               </div>
               <div className="overflow-x-auto">
@@ -216,11 +268,10 @@ export function HACCPReportViewer({ report, onClose }: Props) {
                     </tr>
                   </thead>
                   <tbody>
-                    {report.temperature_data.map((temp: any, idx: number) => (
+                    {groupedTemps[zoneName].map((temp: any, idx: number) => (
                       <tr key={idx} className="border-b border-slate-100 hover:bg-slate-50">
                         <td className="p-2">
                           <p className="font-medium text-slate-800">{temp.equipment?.name || 'Ukjent'}</p>
-                          {temp.zone?.name && <p className="text-xs text-slate-500">{temp.zone.name}</p>}
                         </td>
                         <td className="text-center p-2 text-slate-700">
                           {temp.log_time ? temp.log_time.substring(0, 5) : '-'}
@@ -235,7 +286,7 @@ export function HACCPReportViewer({ report, onClose }: Props) {
                           </span>
                         </td>
                         <td className="text-center p-2 text-slate-600 text-xs">
-                          {getTempLimits(temp.zone?.name || '', temp.equipment?.name || '')}
+                          {getTempLimits(zoneName, temp.equipment?.name || '')}
                         </td>
                         <td className="text-center p-2">
                           {temp.status === 'safe' ? (
@@ -255,14 +306,16 @@ export function HACCPReportViewer({ report, onClose }: Props) {
                             </span>
                           )}
                         </td>
-                        <td className="p-2 text-slate-700">Gourg Brsoum</td>
+                        <td className="p-2 text-slate-700">
+                          {getResponsibleEmployee(temp.log_time, report.report_date)}
+                        </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
             </div>
-          )}
+          ))}
 
           {/* Cleaning Table */}
           {report.cleaning_data && report.cleaning_data.length > 0 && (
@@ -308,7 +361,9 @@ export function HACCPReportViewer({ report, onClose }: Props) {
                             </span>
                           )}
                         </td>
-                        <td className="p-2 text-slate-700">{clean.employee?.name || 'Gourg Brsoum'}</td>
+                        <td className="p-2 text-slate-700">
+                          {getResponsibleEmployee(clean.log_time, report.report_date)}
+                        </td>
                         <td className="p-2 text-slate-500 text-xs italic">
                           {clean.notes || 'Utført som planlagt'}
                         </td>
@@ -320,35 +375,36 @@ export function HACCPReportViewer({ report, onClose }: Props) {
             </div>
           )}
 
-          {/* Hygiene Table */}
-          {report.hygiene_data && report.hygiene_data.length > 0 && (
-            <div className="bg-white rounded-lg border border-slate-200 overflow-hidden">
-              <div className="bg-gradient-to-r from-purple-50 to-blue-50 p-3 border-b border-slate-200">
-                <div className="flex items-center gap-2">
-                  <Droplet className="w-5 h-5 text-purple-600" />
-                  <h5 className="font-bold text-slate-800">Personlig Hygiene</h5>
-                </div>
+          {/* Hygiene Table - Based on Working Employees */}
+          <div className="bg-white rounded-lg border border-slate-200 overflow-hidden">
+            <div className="bg-gradient-to-r from-purple-50 to-blue-50 p-3 border-b border-slate-200">
+              <div className="flex items-center gap-2">
+                <Droplet className="w-5 h-5 text-purple-600" />
+                <h5 className="font-bold text-slate-800">Personlig Hygiene</h5>
               </div>
-              <table className="w-full text-sm">
-                <thead className="bg-slate-50 border-b border-slate-200">
-                  <tr>
-                    <th className="text-left p-2 font-semibold text-slate-700">Ansatt</th>
-                    <th className="text-center p-2 font-semibold text-slate-700">Uniform</th>
-                    <th className="text-center p-2 font-semibold text-slate-700">Hender</th>
-                    <th className="text-center p-2 font-semibold text-slate-700">Håndvask</th>
-                    <th className="text-center p-2 font-semibold text-slate-700">Negler</th>
-                    <th className="text-center p-2 font-semibold text-slate-700">Hår</th>
-                    <th className="text-center p-2 font-semibold text-slate-700">Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {report.hygiene_data.map((hygiene: any, idx: number) => (
+            </div>
+            <table className="w-full text-sm">
+              <thead className="bg-slate-50 border-b border-slate-200">
+                <tr>
+                  <th className="text-left p-2 font-semibold text-slate-700">Ansatt</th>
+                  <th className="text-center p-2 font-semibold text-slate-700">Uniform</th>
+                  <th className="text-center p-2 font-semibold text-slate-700">Hender</th>
+                  <th className="text-center p-2 font-semibold text-slate-700">Håndvask</th>
+                  <th className="text-center p-2 font-semibold text-slate-700">Negler</th>
+                  <th className="text-center p-2 font-semibold text-slate-700">Hår</th>
+                  <th className="text-center p-2 font-semibold text-slate-700">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {workingEmployees.map((employeeName: string, idx: number) => {
+                  const hygieneCheck = report.hygiene_data?.find((h: any) =>
+                    h.employee?.name === employeeName || h.staff_name === employeeName
+                  );
+                  return (
                     <tr key={idx} className="border-b border-slate-100 hover:bg-slate-50">
-                      <td className="p-2 font-medium text-slate-800">
-                        {hygiene.employee?.name || hygiene.staff_name || 'Ukjent'}
-                      </td>
+                      <td className="p-2 font-medium text-slate-800">{employeeName}</td>
                       <td className="text-center p-2">
-                        {hygiene.uniform_clean ? (
+                        {hygieneCheck?.uniform_clean !== false ? (
                           <CheckCircle className="w-5 h-5 text-green-600 mx-auto" />
                         ) : (
                           <XCircle className="w-5 h-5 text-red-600 mx-auto" />
@@ -358,7 +414,7 @@ export function HACCPReportViewer({ report, onClose }: Props) {
                         <CheckCircle className="w-5 h-5 text-green-600 mx-auto" />
                       </td>
                       <td className="text-center p-2">
-                        {hygiene.hands_washed ? (
+                        {hygieneCheck?.hands_washed !== false ? (
                           <CheckCircle className="w-5 h-5 text-green-600 mx-auto" />
                         ) : (
                           <XCircle className="w-5 h-5 text-red-600 mx-auto" />
@@ -374,22 +430,48 @@ export function HACCPReportViewer({ report, onClose }: Props) {
                         <span className="text-green-700 font-medium text-xs">OK</span>
                       </td>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
 
-          {/* Signature */}
-          {report.signed_by && (
-            <div className="bg-green-50 border-l-4 border-green-500 p-4 rounded-r-lg flex items-center gap-3">
-              <User className="w-5 h-5 text-green-700" />
-              <p className="text-sm text-green-900">
-                <span className="font-bold">Signert av:</span> {report.signed_by} -{' '}
-                {new Date(report.signed_at!).toLocaleString('no-NO')}
-              </p>
+          {/* Manager Signature */}
+          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-300 rounded-xl p-6">
+            <div className="flex items-center gap-4 mb-4">
+              <User className="w-6 h-6 text-blue-700" />
+              <h5 className="font-bold text-blue-900 text-lg">Godkjenning</h5>
             </div>
-          )}
+            <div className="grid grid-cols-2 gap-6">
+              <div>
+                <p className="text-sm text-slate-600 mb-2">Daglig leder</p>
+                <div className="border-b-2 border-slate-400 pb-2">
+                  <p className="font-bold text-slate-800">{report.signed_by || '_____________________'}</p>
+                </div>
+              </div>
+              <div>
+                <p className="text-sm text-slate-600 mb-2">Dato og tid</p>
+                <div className="border-b-2 border-slate-400 pb-2">
+                  <p className="font-bold text-slate-800">
+                    {report.signed_at
+                      ? new Date(report.signed_at).toLocaleString('no-NO', {
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })
+                      : '_____________________'}
+                  </p>
+                </div>
+              </div>
+            </div>
+            {!report.signed_by && (
+              <p className="text-xs text-orange-600 mt-3 italic">
+                * Rapporten må signeres av daglig leder for å være gyldig
+              </p>
+            )}
+          </div>
         </div>
       </div>
     </div>
