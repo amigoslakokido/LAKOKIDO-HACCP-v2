@@ -25,6 +25,7 @@ interface Props {
 export function HACCPReportViewer({ report, onClose }: Props) {
   const getTempLimits = (zoneName: string, equipmentName: string) => {
     if (zoneName === 'Fryser') return '-32° til -18°';
+    if (zoneName === 'Oppvaskmaskin' || equipmentName?.toLowerCase().includes('oppvask')) return '60° til 85°';
     if (zoneName === 'Kjøleskap' || zoneName === 'Varemottak') return '-5° til 4°';
     if (equipmentName?.includes('Vask') || equipmentName?.includes('Vannbad') || equipmentName?.includes('Kjøtt')) {
       return '60° til 85°';
@@ -47,7 +48,7 @@ export function HACCPReportViewer({ report, onClose }: Props) {
     const grouped: { [key: string]: any[] } = {};
 
     tempData.forEach((temp: any) => {
-      const zoneName = temp.zone?.name || 'Annet';
+      const zoneName = temp.zone?.name || temp.equipment?.name || 'Ukjent';
       if (!grouped[zoneName]) {
         grouped[zoneName] = [];
       }
@@ -57,14 +58,41 @@ export function HACCPReportViewer({ report, onClose }: Props) {
     return grouped;
   };
 
-  // Get employee name - always return Gourg Brsoum
+  // Get employee name based on day of week and time
   const getResponsibleEmployee = (logTime: string, reportDate: string) => {
-    return 'Gourg Brsoum';
+    const date = new Date(reportDate);
+    const dayOfWeek = date.getDay(); // 0=Sunday, 1=Monday, ..., 6=Saturday
+    const timeStr = logTime || '12:00:00';
+    const hour = parseInt(timeStr.substring(0, 2));
+
+    // Employees list
+    const weekdayEmployees = ['Gourg Brsoum', 'Larcen Marcus'];
+    const weekendEmployees = ['Gourg Brsoum', 'Larcen Marcus', 'Ahmed Ali', 'Sara Olsen'];
+
+    // Monday-Thursday: 2 employees
+    if (dayOfWeek >= 1 && dayOfWeek <= 4) {
+      return hour < 17 ? weekdayEmployees[0] : weekdayEmployees[1];
+    }
+
+    // Friday, Saturday, Sunday: 4 employees
+    if (hour < 14) return weekendEmployees[0];
+    if (hour < 17) return weekendEmployees[1];
+    if (hour < 20) return weekendEmployees[2];
+    return weekendEmployees[3];
   };
 
-  // Get all employees working on this day - always return Gourg Brsoum
+  // Get all employees working on this day
   const getWorkingEmployees = (reportDate: string) => {
-    return ['Gourg Brsoum'];
+    const date = new Date(reportDate);
+    const dayOfWeek = date.getDay();
+
+    // Monday-Thursday: 2 employees
+    if (dayOfWeek >= 1 && dayOfWeek <= 4) {
+      return ['Gourg Brsoum', 'Larcen Marcus'];
+    }
+
+    // Friday, Saturday, Sunday: 4 employees
+    return ['Gourg Brsoum', 'Larcen Marcus', 'Ahmed Ali', 'Sara Olsen'];
   };
 
   const stats = countStatus();
@@ -131,7 +159,7 @@ export function HACCPReportViewer({ report, onClose }: Props) {
         pdf.text(getTempLimits(zoneName, temp.equipment?.name || ''), 110, yPos);
         const status = temp.status === 'safe' ? 'OK' : temp.status === 'warning' ? 'Advarsel' : 'Kritisk';
         pdf.text(status, 140, yPos);
-        pdf.text('Gourg Brsoum', 160, yPos);
+        pdf.text(getResponsibleEmployee(temp.log_time, report.report_date), 160, yPos);
         yPos += 5;
       });
       yPos += 8;
@@ -167,7 +195,7 @@ export function HACCPReportViewer({ report, onClose }: Props) {
         pdf.text(clean.task?.name || 'Ukjent oppgave', 20, yPos);
         pdf.text(clean.log_time ? clean.log_time.substring(0, 5) : '-', 100, yPos);
         pdf.text(clean.completed ? 'Fullfort' : 'Mangler', 125, yPos);
-        pdf.text('Gourg Brsoum', 150, yPos);
+        pdf.text(getResponsibleEmployee(clean.log_time, report.report_date), 150, yPos);
         yPos += 5;
       });
       yPos += 8;
