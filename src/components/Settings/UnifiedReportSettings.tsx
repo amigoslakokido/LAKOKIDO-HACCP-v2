@@ -134,47 +134,72 @@ export function UnifiedReportSettings() {
           .order('start_time', { ascending: false })
       ]);
 
-      const temperatureData = {
-        data: tempResult.data?.map((t: any) => ({
-          ...t,
-          zone: t.equipment?.zone || { name: 'Annet' },
-          equipment: { name: t.equipment?.name || 'Ukjent' }
-        })) || [],
-        error: tempResult.error
-      };
+      const temperatureData = tempResult.data?.map((t: any) => ({
+        id: t.id,
+        log_date: t.log_date,
+        log_time: t.log_time,
+        temperature: t.temperature,
+        status: t.status,
+        notes: t.notes,
+        timestamp: t.created_at,
+        zone: t.equipment?.zone || { id: null, name: 'Annet' },
+        equipment: { id: t.equipment?.id, name: t.equipment?.name || 'Ukjent' }
+      })) || [];
 
-      const cleaningData = {
-        data: cleanResult.data?.map((c: any) => ({
-          ...c,
-          completed: c.status === 'completed',
-          task: { name: c.task?.task_name || 'Ukjent' },
-          employee: c.employee || { name: 'Ukjent' }
-        })) || [],
-        error: cleanResult.error
-      };
+      const cleaningData = cleanResult.data?.map((c: any) => ({
+        id: c.id,
+        log_date: c.log_date,
+        log_time: c.log_time,
+        status: c.status,
+        notes: c.notes,
+        timestamp: c.created_at,
+        completed: c.status === 'completed',
+        task: { name: c.task?.task_name || 'Ukjent' },
+        employee: { name: 'موظف' }
+      })) || [];
 
-      const hygieneData = {
-        data: hygieneResult.data?.map((h: any) => ({
-          ...h,
-          check_time: '08:00:00',
-          employee: { name: h.staff_name || 'Ukjent' }
-        })) || [],
-        error: hygieneResult.error
-      };
+      const hygieneData = hygieneResult.data?.map((h: any) => ({
+        id: h.id,
+        check_date: h.check_date,
+        staff_name: h.staff_name,
+        uniform_clean: h.uniform_clean,
+        hands_washed: h.hands_washed,
+        jewelry_removed: h.jewelry_removed,
+        illness_free: h.illness_free,
+        notes: h.notes,
+        timestamp: h.created_at,
+        employee: { name: h.staff_name || 'Ukjent' },
+        hair_covered: true
+      })) || [];
 
-      const coolingData = coolingResult;
+      const coolingData = coolingResult.data?.map((c: any) => ({
+        id: c.id,
+        product_type: c.product_type,
+        product_name: c.product_name,
+        initial_temp: c.initial_temp,
+        final_temp: c.final_temp,
+        start_time: c.start_time,
+        end_time: c.end_time,
+        within_limits: c.within_limits,
+        notes: c.notes,
+        log_date: c.log_date,
+        timestamp: c.created_at,
+        target_temperature: c.final_temp,
+        quantity: 1,
+        unit: 'kg'
+      })) || [];
 
       let overallStatus: 'pass' | 'warning' | 'fail' = 'pass';
 
-      if (temperatureData.data) {
-        const dangerTemps = temperatureData.data.filter((t: any) => t.status === 'danger');
-        const warningTemps = temperatureData.data.filter((t: any) => t.status === 'warning');
+      if (temperatureData) {
+        const dangerTemps = temperatureData.filter((t: any) => t.status === 'danger');
+        const warningTemps = temperatureData.filter((t: any) => t.status === 'warning');
         if (dangerTemps.length > 0) overallStatus = 'fail';
         else if (warningTemps.length > 0 && overallStatus !== 'fail') overallStatus = 'warning';
       }
 
-      if (cleaningData.data) {
-        const incompleteTasks = cleaningData.data.filter((c: any) => !c.completed);
+      if (cleaningData) {
+        const incompleteTasks = cleaningData.filter((c: any) => !c.completed);
         if (incompleteTasks.length > 0 && overallStatus === 'pass') overallStatus = 'warning';
       }
 
@@ -186,10 +211,10 @@ export function UnifiedReportSettings() {
           generated_by: 'Manual',
           report_type: 'manual',
           overall_status: overallStatus,
-          temperature_data: temperatureData.data || [],
-          cleaning_data: cleaningData.data || [],
-          hygiene_data: hygieneData.data || [],
-          cooling_data: coolingData.data || []
+          temperature_data: temperatureData || [],
+          cleaning_data: cleaningData || [],
+          hygiene_data: hygieneData || [],
+          cooling_data: coolingData || []
         });
 
       if (insertError) throw insertError;
