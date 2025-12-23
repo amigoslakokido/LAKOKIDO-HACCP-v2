@@ -104,18 +104,16 @@ export function HACCPReportViewer({ report, onClose }: Props) {
     const hour = parseInt(timeStr.substring(0, 2));
 
     // Active employees only
-    const allEmployees = ['Gourg Brsoum', 'Elias Aldakhil', 'Feras Al Matrood', 'George Kondraq', 'Taif Kondraq'];
+    const allEmployees = ['Gourg Brsoum', 'Elias Aldakhil', 'Feras Al Matrood', 'George Kondraq'];
 
     // Monday-Thursday: 2 employees
     if (dayOfWeek >= 1 && dayOfWeek <= 4) {
-      return hour < 17 ? allEmployees[0] : allEmployees[1];
+      return hour < 15 ? allEmployees[0] : allEmployees[1];
     }
 
-    // Friday, Saturday, Sunday: 4 employees
-    if (hour < 12) return allEmployees[0];
-    if (hour < 16) return allEmployees[1];
-    if (hour < 20) return allEmployees[2];
-    return allEmployees[3];
+    // Friday (5), Saturday (6), Sunday (0): 4 employees
+    const empIndex = Math.floor((hour - 10) / 3) % allEmployees.length;
+    return allEmployees[Math.max(0, Math.min(empIndex, allEmployees.length - 1))];
   };
 
   // Get all employees working on this day
@@ -147,17 +145,16 @@ export function HACCPReportViewer({ report, onClose }: Props) {
     pdf.setFillColor(37, 99, 235);
     pdf.rect(0, 0, pageWidth, 70, 'F');
 
-    if (companyInfo) {
-      pdf.setFontSize(16);
-      pdf.setFont('helvetica', 'bold');
-      pdf.setTextColor(255, 255, 255);
-      pdf.text(companyInfo.company_name || 'Amigos la Kokido AS', 20, 15);
+    // Company info header
+    pdf.setFontSize(16);
+    pdf.setFont('helvetica', 'bold');
+    pdf.setTextColor(255, 255, 255);
+    pdf.text(companyInfo?.company_name || 'Amigos la Kokido AS', 20, 15);
 
-      pdf.setFontSize(9);
-      pdf.setFont('helvetica', 'normal');
-      pdf.text(`${companyInfo.address || 'Trondheimsveien 2, 0560 Oslo'}`, 20, 22);
-      pdf.text(`Tel: ${companyInfo.phone || '+47 900 30 066'} | Org.nr: ${companyInfo.org_number || '929 603 14'}`, 20, 28);
-    }
+    pdf.setFontSize(9);
+    pdf.setFont('helvetica', 'normal');
+    pdf.text(companyInfo?.address || 'Ryggereat 49, 1580 Halmstad', 20, 22);
+    pdf.text(`Tel: ${companyInfo?.phone || '45576081'} | Org.nr: ${companyInfo?.org_number || '933120570'}`, 20, 28);
 
     pdf.setFontSize(22);
     pdf.setFont('helvetica', 'bold');
