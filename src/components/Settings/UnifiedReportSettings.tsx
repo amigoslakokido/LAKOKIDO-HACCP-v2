@@ -385,9 +385,10 @@ export function UnifiedReportSettings() {
         if (incompleteTasks.length > 0 && overallStatus === 'pass') overallStatus = 'warning';
       }
 
-    const reportDateTime = new Date(dateStr + 'T12:00:00');
-    const randomMinutes = Math.floor(Math.random() * 180) - 60;
-    reportDateTime.setMinutes(reportDateTime.getMinutes() + randomMinutes);
+    const reportDateTime = new Date(dateStr);
+    const randomHour = Math.floor(Math.random() * 14) + 8;
+    const randomMinute = Math.floor(Math.random() * 60);
+    reportDateTime.setHours(randomHour, randomMinute, 0, 0);
 
     const { error: insertError } = await supabase
       .from('haccp_daily_reports')
