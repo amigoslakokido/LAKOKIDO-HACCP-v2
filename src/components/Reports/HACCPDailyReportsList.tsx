@@ -155,7 +155,13 @@ export function HACCPDailyReportsList() {
                           })}
                         </h3>
                         <p className="text-sm text-slate-600">
-                          Generert: {new Date(report.generated_at).toLocaleString('no-NO')} | {report.generated_by || 'System'}
+                          Kontrollert: {new Date(report.report_date).toLocaleDateString('no-NO', {
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            day: '2-digit',
+                            month: '2-digit',
+                            year: 'numeric'
+                          })}
                         </p>
                       </div>
                     </div>

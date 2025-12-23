@@ -139,14 +139,8 @@ export function HACCPDailyReports() {
 
     pdf.setFontSize(12);
     pdf.setFont('helvetica', 'normal');
-    pdf.text(`Dato: ${new Date(report.report_date).toLocaleDateString('no-NO')}`, 20, yPos);
+    pdf.text(`Kontrollert: ${new Date(report.report_date).toLocaleDateString('no-NO')}`, 20, yPos);
     yPos += 7;
-    pdf.text(`Generert: ${new Date(report.generated_at).toLocaleString('no-NO')}`, 20, yPos);
-    yPos += 7;
-    if (report.generated_by) {
-      pdf.text(`Generert av: ${report.generated_by}`, 20, yPos);
-      yPos += 7;
-    }
 
     const statusText = report.overall_status === 'pass' ? 'Bestatt' :
                        report.overall_status === 'warning' ? 'Advarsel' : 'Feil';
@@ -403,9 +397,6 @@ export function HACCPDailyReports() {
                         <span className={`px-2 py-0.5 rounded-full text-xs font-bold border ${getStatusColor(report.overall_status)}`}>
                           {report.overall_status === 'pass' ? 'Bestått' :
                            report.overall_status === 'warning' ? 'Advarsel' : 'Feil'}
-                        </span>
-                        <span className="px-2 py-0.5 bg-slate-100 text-slate-700 rounded-full text-xs font-semibold">
-                          {report.report_type === 'manual' ? 'Manuell' : 'Auto'}
                         </span>
                         {report.signed_by && (
                           <span className="px-2 py-0.5 bg-green-100 text-green-700 rounded-full text-xs font-semibold flex items-center gap-1">

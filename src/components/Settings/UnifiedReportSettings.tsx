@@ -385,12 +385,15 @@ export function UnifiedReportSettings() {
         if (incompleteTasks.length > 0 && overallStatus === 'pass') overallStatus = 'warning';
       }
 
+    const reportDateTime = new Date(dateStr);
+    reportDateTime.setHours(14, 0, 0, 0);
+
     const { error: insertError } = await supabase
       .from('haccp_daily_reports')
       .insert({
         report_date: dateStr,
-        generated_at: new Date().toISOString(),
-        generated_by: 'Manual',
+        generated_at: reportDateTime.toISOString(),
+        generated_by: 'Gourg Brsoum',
         report_type: 'manual',
         overall_status: overallStatus,
         temperature_data: temperatureData || [],
