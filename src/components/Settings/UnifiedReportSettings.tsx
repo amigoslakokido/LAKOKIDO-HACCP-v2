@@ -22,15 +22,15 @@ export function UnifiedReportSettings() {
     try {
       setLoading(true);
       const { data, error } = await supabase
-        .from('scheduled_reports')
+        .from('scheduled_reports_config')
         .select('*')
-        .eq('report_type', 'haccp_daily')
         .maybeSingle();
 
       if (data) {
-        setAutoReportEnabled(data.enabled);
-        setReportTime(data.schedule_time || '23:00');
-        setIncludeWeekends(data.include_weekends ?? true);
+        setAutoReportEnabled(data.is_enabled || false);
+        const timeStr = data.schedule_time || '23:00:00';
+        setReportTime(timeStr.substring(0, 5));
+        setIncludeWeekends(true);
       }
     } catch (error) {
       console.error('Error loading settings:', error);
@@ -43,17 +43,33 @@ export function UnifiedReportSettings() {
     try {
       setSavingSettings(true);
 
-      const { error } = await supabase
-        .from('scheduled_reports')
-        .upsert({
-          report_type: 'haccp_daily',
-          enabled: autoReportEnabled,
-          schedule_time: reportTime,
-          include_weekends: includeWeekends,
-          last_run: null
-        });
+      const { data: existing } = await supabase
+        .from('scheduled_reports_config')
+        .select('id')
+        .maybeSingle();
 
-      if (error) throw error;
+      if (existing) {
+        const { error } = await supabase
+          .from('scheduled_reports_config')
+          .update({
+            is_enabled: autoReportEnabled,
+            schedule_time: reportTime + ':00',
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', existing.id);
+
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from('scheduled_reports_config')
+          .insert({
+            is_enabled: autoReportEnabled,
+            schedule_time: reportTime + ':00'
+          });
+
+        if (error) throw error;
+      }
+
       alert('Innstillinger lagret!');
     } catch (error) {
       console.error('Error saving settings:', error);
