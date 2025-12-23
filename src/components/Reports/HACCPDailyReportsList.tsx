@@ -24,6 +24,7 @@ export function HACCPDailyReportsList() {
   const [loading, setLoading] = useState(true);
   const [viewingReport, setViewingReport] = useState<HACCPReport | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [selectedReports, setSelectedReports] = useState<Set<string>>(new Set());
   const reportsPerPage = 10;
 
   useEffect(() => {
@@ -64,6 +65,47 @@ export function HACCPDailyReportsList() {
     } catch (error) {
       console.error('Error deleting report:', error);
       alert('Feil ved sletting av rapport');
+    }
+  };
+
+  const deleteSelectedReports = async () => {
+    if (selectedReports.size === 0) return;
+
+    if (!confirm(`Er du sikker på at du vil slette ${selectedReports.size} rapporter?`)) {
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('haccp_daily_reports')
+        .delete()
+        .in('id', Array.from(selectedReports));
+
+      if (error) throw error;
+      alert(`${selectedReports.size} rapporter slettet!`);
+      setSelectedReports(new Set());
+      fetchReports();
+    } catch (error) {
+      console.error('Error deleting reports:', error);
+      alert('Feil ved sletting av rapporter');
+    }
+  };
+
+  const toggleReportSelection = (reportId: string) => {
+    const newSelection = new Set(selectedReports);
+    if (newSelection.has(reportId)) {
+      newSelection.delete(reportId);
+    } else {
+      newSelection.add(reportId);
+    }
+    setSelectedReports(newSelection);
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedReports.size === currentReports.length) {
+      setSelectedReports(new Set());
+    } else {
+      setSelectedReports(new Set(currentReports.map(r => r.id)));
     }
   };
 
@@ -130,6 +172,30 @@ export function HACCPDailyReportsList() {
           </div>
         ) : (
           <>
+            {reports.length > 1 && (
+              <div className="flex items-center justify-between bg-white rounded-lg p-4 border-2 border-slate-200">
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={selectedReports.size === currentReports.length && currentReports.length > 0}
+                    onChange={toggleSelectAll}
+                    className="w-5 h-5 rounded border-slate-300 text-blue-600 focus:ring-2 focus:ring-blue-500"
+                  />
+                  <span className="font-bold text-slate-700">
+                    {selectedReports.size > 0 ? `${selectedReports.size} valgt` : 'Velg alle'}
+                  </span>
+                </label>
+                {selectedReports.size > 0 && (
+                  <button
+                    onClick={deleteSelectedReports}
+                    className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-all font-bold"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    Slett valgte ({selectedReports.size})
+                  </button>
+                )}
+              </div>
+            )}
             <div className="grid gap-4">
               {currentReports.map((report) => {
               const statusInfo = getStatusInfo(report.overall_status);
@@ -140,10 +206,20 @@ export function HACCPDailyReportsList() {
               return (
                 <div
                   key={report.id}
-                  className={`border-2 ${statusInfo.borderColor} ${statusInfo.bgColor} rounded-xl p-6 hover:shadow-lg transition-all`}
+                  className={`border-2 ${statusInfo.borderColor} ${statusInfo.bgColor} rounded-xl p-6 hover:shadow-lg transition-all ${
+                    selectedReports.has(report.id) ? 'ring-4 ring-blue-300' : ''
+                  }`}
                 >
                   <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-3">
+                      {reports.length > 1 && (
+                        <input
+                          type="checkbox"
+                          checked={selectedReports.has(report.id)}
+                          onChange={() => toggleReportSelection(report.id)}
+                          className="w-5 h-5 rounded border-slate-300 text-blue-600 focus:ring-2 focus:ring-blue-500"
+                        />
+                      )}
                       {statusInfo.icon}
                       <div>
                         <h3 className="text-xl font-bold text-slate-800">
@@ -155,7 +231,7 @@ export function HACCPDailyReportsList() {
                           })}
                         </h3>
                         <p className="text-sm text-slate-600">
-                          Kontrollert: {new Date(report.report_date).toLocaleDateString('no-NO', {
+                          Kontrollert: {new Date(report.generated_at).toLocaleDateString('no-NO', {
                             hour: '2-digit',
                             minute: '2-digit',
                             day: '2-digit',
