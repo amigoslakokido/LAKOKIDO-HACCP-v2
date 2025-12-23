@@ -91,7 +91,7 @@ export function UnifiedReportSettings() {
     const rand = Math.random() * 100;
     if (rand < 2) return 'danger';
     if (rand < 5) return 'warning';
-    return 'ok';
+    return 'safe';
   };
 
   const generateMockTemperatureData = (dateStr: string) => {
@@ -153,9 +153,9 @@ export function UnifiedReportSettings() {
         id: `mock-clean-${idx}-${dateStr}`,
         log_date: dateStr,
         log_time: randomTime,
-        status: status === 'ok' ? 'completed' : (status === 'warning' ? 'pending' : 'failed'),
+        status: status === 'safe' ? 'completed' : (status === 'warning' ? 'pending' : 'failed'),
         notes: null,
-        completed: status === 'ok',
+        completed: status === 'safe',
         task: { name: task },
         employee: { name: 'Gourg Brsoum' }
       };
@@ -194,7 +194,7 @@ export function UnifiedReportSettings() {
       let initial_temp = 65 + Math.random() * 10;
       let final_temp: number;
 
-      if (status === 'ok') {
+      if (status === 'safe') {
         final_temp = 2 + Math.random() * 2;
       } else if (status === 'warning') {
         final_temp = 4 + Math.random() * 1;
@@ -210,7 +210,7 @@ export function UnifiedReportSettings() {
         final_temp: Number(final_temp.toFixed(1)),
         start_time: startTime,
         end_time: endTime,
-        within_limits: status === 'ok',
+        within_limits: status === 'safe',
         notes: null,
         log_date: dateStr,
         target_temperature: final_temp,

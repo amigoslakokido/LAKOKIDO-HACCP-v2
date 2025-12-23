@@ -1,5 +1,7 @@
 import { CheckCircle, XCircle, AlertTriangle, Thermometer, Sparkles, Droplet, User, Download, Snowflake } from 'lucide-react';
 import jsPDF from 'jspdf';
+import { useState, useEffect } from 'react';
+import { supabase } from '../../lib/supabase';
 
 interface HACCPReport {
   id: string;
@@ -23,6 +25,27 @@ interface Props {
 }
 
 export function HACCPReportViewer({ report, onClose }: Props) {
+  const [companyInfo, setCompanyInfo] = useState<any>(null);
+
+  useEffect(() => {
+    loadCompanyInfo();
+  }, []);
+
+  const loadCompanyInfo = async () => {
+    try {
+      const { data } = await supabase
+        .from('hms_company_settings')
+        .select('*')
+        .maybeSingle();
+
+      if (data) {
+        setCompanyInfo(data);
+      }
+    } catch (error) {
+      console.error('Error loading company info:', error);
+    }
+  };
+
   const getTempLimits = (zoneName: string, equipmentName: string) => {
     if (zoneName === 'Fryser') return '-32° til -18°';
     if (zoneName === 'Oppvaskmaskin' || equipmentName?.toLowerCase().includes('oppvask')) return '60° til 85°';
@@ -122,22 +145,34 @@ export function HACCPReportViewer({ report, onClose }: Props) {
     let yPos = 20;
 
     pdf.setFillColor(37, 99, 235);
-    pdf.rect(0, 0, pageWidth, 50, 'F');
+    pdf.rect(0, 0, pageWidth, 70, 'F');
+
+    if (companyInfo) {
+      pdf.setFontSize(16);
+      pdf.setFont('helvetica', 'bold');
+      pdf.setTextColor(255, 255, 255);
+      pdf.text(companyInfo.company_name || 'Amigos la Kokido AS', 20, 15);
+
+      pdf.setFontSize(9);
+      pdf.setFont('helvetica', 'normal');
+      pdf.text(`${companyInfo.address || 'Trondheimsveien 2, 0560 Oslo'}`, 20, 22);
+      pdf.text(`Tel: ${companyInfo.phone || '+47 900 30 066'} | Org.nr: ${companyInfo.org_number || '929 603 14'}`, 20, 28);
+    }
 
     pdf.setFontSize(22);
     pdf.setFont('helvetica', 'bold');
     pdf.setTextColor(255, 255, 255);
-    pdf.text('HACCP Daglig Kontrollrapport', 20, 20);
+    pdf.text('HACCP Daglig Kontrollrapport', 20, 40);
 
     pdf.setFontSize(11);
     pdf.setFont('helvetica', 'normal');
-    pdf.text(`Rapport ID: ${report.id.substring(0, 8)} | Dato: ${new Date(report.report_date).toLocaleDateString('no-NO')}`, 20, 30);
+    pdf.text(`Rapport ID: ${report.id.substring(0, 8)} | Dato: ${new Date(report.report_date).toLocaleDateString('no-NO')}`, 20, 50);
 
     pdf.setFontSize(9);
-    pdf.text(`Totale: ${stats.total}    Godkjent: ${stats.godkjent}    Advarsler: ${stats.advarsler}    Kritiske: ${stats.kritiske}`, 20, 42);
+    pdf.text(`Totale: ${stats.total}    Godkjent: ${stats.godkjent}    Advarsler: ${stats.advarsler}    Kritiske: ${stats.kritiske}`, 20, 62);
 
     pdf.setTextColor(0, 0, 0);
-    yPos = 60;
+    yPos = 80;
 
     Object.keys(groupedTemps).forEach((zoneName) => {
       if (yPos > pageHeight - 50) {
