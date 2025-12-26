@@ -82,10 +82,20 @@ export function UnifiedReportSettings() {
   };
 
   const randomizeTime = (baseHour: number, minuteVariation = 30) => {
+    const workStartHour = 11;
+    const workEndHour = 22;
+
     const minutes = Math.floor(Math.random() * minuteVariation);
-    const totalMinutes = baseHour * 60 + minutes;
-    const hours = Math.floor(totalMinutes / 60);
+    let totalMinutes = baseHour * 60 + minutes;
+    let hours = Math.floor(totalMinutes / 60);
     const mins = totalMinutes % 60;
+
+    if (hours < workStartHour) {
+      hours = workStartHour;
+    } else if (hours >= workEndHour) {
+      hours = workEndHour - 1;
+    }
+
     return `${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}:00`;
   };
 
