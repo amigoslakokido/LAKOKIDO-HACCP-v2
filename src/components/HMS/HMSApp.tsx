@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { HMSDashboard } from './HMSDashboard';
 import { IncidentsMain } from './IncidentsMain';
 import { Training } from './Training';
@@ -68,43 +68,17 @@ export function HMSApp() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [expandedItems, setExpandedItems] = useState<string[]>(['dashboard']);
 
+  useEffect(() => {
+    (window as any).hmsNavigate = (view: string) => {
+      setCurrentView(view);
+      setMobileMenuOpen(false);
+    };
+    return () => {
+      delete (window as any).hmsNavigate;
+    };
+  }, []);
+
   const navigationItems = [
-    {
-      id: 'dashboard',
-      name: '📊 Dashboard',
-      icon: LayoutDashboard,
-      items: [
-        { id: 'dashboard-overview', name: 'Oversikt', icon: TrendingUp },
-      ]
-    },
-    {
-      id: 'goals',
-      name: '🎯 Målsetting',
-      icon: Target,
-      items: [
-        { id: 'goals-hms', name: 'HMS-mål', icon: Target },
-        { id: 'goals-policies', name: 'Policyer', icon: FileCheck },
-        { id: 'goals-orgchart', name: 'Organisasjonskart', icon: Network },
-      ]
-    },
-    {
-      id: 'company',
-      name: '🏢 Bedrift',
-      icon: Building2,
-      items: [
-        { id: 'company-info', name: 'Firmaopplysninger', icon: Building2 },
-        { id: 'company-insurance', name: 'Forsikringer', icon: Shield },
-      ]
-    },
-    {
-      id: 'employees',
-      name: '👥 Ansatte',
-      icon: Users,
-      items: [
-        { id: 'employees-list', name: 'Personalliste', icon: Users },
-        { id: 'employees-verneombud', name: 'Verneombud', icon: ShieldCheck },
-      ]
-    },
     {
       id: 'health-safety',
       name: '🏥 Helse & Sikkerhet',
@@ -134,14 +108,6 @@ export function HMSApp() {
       ]
     },
     {
-      id: 'incidents',
-      name: '⚠️ Hendelser',
-      icon: AlertTriangle,
-      items: [
-        { id: 'incidents-main', name: 'Hendelser', icon: AlertTriangle },
-      ]
-    },
-    {
       id: 'internal-control',
       name: '✅ Internkontroll',
       icon: Search,
@@ -161,30 +127,11 @@ export function HMSApp() {
       ]
     },
     {
-      id: 'documents',
-      name: '📁 Dokumenter',
-      icon: FileStack,
-      items: [
-        { id: 'documents-manager', name: 'Dokumenter', icon: FileStack },
-        { id: 'documents-laws', name: 'Lovverk', icon: Scale },
-      ]
-    },
-    {
       id: 'reports',
       name: '📊 Rapporter',
       icon: FileText,
       items: [
         { id: 'reports-all', name: 'Alle Rapporter', icon: FileText },
-      ]
-    },
-    {
-      id: 'settings',
-      name: '⚙️ Innstillinger',
-      icon: Wrench,
-      items: [
-        { id: 'settings-ai-config', name: 'AI Innstillinger', icon: Brain },
-        { id: 'settings-ai', name: 'AI Rapporter', icon: Brain },
-        { id: 'settings-reports', name: 'Automatiske rapporter', icon: FileText },
       ]
     },
   ];

@@ -24,7 +24,13 @@ import {
  Leaf,
  Heart,
  AlertCircle,
- Activity
+ Activity,
+ Target,
+ Building2,
+ Users,
+ FileStack,
+ Settings,
+ ArrowRight
 } from 'lucide-react';
 
 ChartJS.register(
@@ -54,6 +60,16 @@ interface AnalyticsData {
  severityDistribution: { [key: string]: number };
  monthlyComparison: { current: number; previous: number };
  topLocations: { location: string; count: number }[];
+}
+
+interface QuickAccessSection {
+ id: string;
+ name: string;
+ description: string;
+ icon: any;
+ color: string;
+ bgColor: string;
+ borderColor: string;
 }
 
 export function HMSDashboard() {
@@ -171,6 +187,63 @@ export function HMSDashboard() {
  ? ((trend / analyticsData.monthlyComparison.previous) * 100).toFixed(1)
  : '0';
 
+ const quickAccessSections: QuickAccessSection[] = [
+ {
+ id: 'goals',
+ name: 'Målsetting',
+ description: 'HMS-mål og policyer',
+ icon: Target,
+ color: 'text-blue-600',
+ bgColor: 'from-blue-50 to-blue-100',
+ borderColor: 'border-blue-200'
+ },
+ {
+ id: 'company',
+ name: 'Bedrift',
+ description: 'Firmaopplysninger',
+ icon: Building2,
+ color: 'text-cyan-600',
+ bgColor: 'from-cyan-50 to-cyan-100',
+ borderColor: 'border-cyan-200'
+ },
+ {
+ id: 'employees',
+ name: 'Ansatte',
+ description: 'Personalliste',
+ icon: Users,
+ color: 'text-teal-600',
+ bgColor: 'from-teal-50 to-teal-100',
+ borderColor: 'border-teal-200'
+ },
+ {
+ id: 'incidents',
+ name: 'Hendelser',
+ description: 'Hendelsesregistrering',
+ icon: AlertTriangle,
+ color: 'text-orange-600',
+ bgColor: 'from-orange-50 to-orange-100',
+ borderColor: 'border-orange-200'
+ },
+ {
+ id: 'documents',
+ name: 'Dokumenter',
+ description: 'Dokumenthåndtering',
+ icon: FileStack,
+ color: 'text-indigo-600',
+ bgColor: 'from-indigo-50 to-indigo-100',
+ borderColor: 'border-indigo-200'
+ },
+ {
+ id: 'settings',
+ name: 'Innstillinger',
+ description: 'Systeminnstillinger',
+ icon: Settings,
+ color: 'text-slate-600',
+ bgColor: 'from-slate-50 to-slate-100',
+ borderColor: 'border-slate-200'
+ }
+ ];
+
  return (
  <div className="space-y-6">
  <div className="flex items-center justify-between">
@@ -226,6 +299,50 @@ export function HMSDashboard() {
  </div>
  <h3 className="text-lg font-bold text-emerald-900 mb-1">HMS Score</h3>
  <p className="text-sm text-emerald-700">Samlet vurdering</p>
+ </div>
+ </div>
+
+ <div className="bg-white rounded-2xl p-6 border-2 border-slate-200">
+ <div className="flex items-center justify-between mb-6">
+ <div>
+ <h2 className="text-2xl font-black text-slate-900">Hurtiglenker</h2>
+ <p className="text-sm text-slate-600 mt-1">Tilgang til viktige moduler</p>
+ </div>
+ </div>
+ <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+ {quickAccessSections.map((section) => {
+ const Icon = section.icon;
+ return (
+ <button
+ key={section.id}
+ onClick={() => {
+ const viewMap: { [key: string]: string } = {
+ 'goals': 'goals-hms',
+ 'company': 'company-info',
+ 'employees': 'employees-list',
+ 'incidents': 'incidents-main',
+ 'documents': 'documents-manager',
+ 'settings': 'settings-ai-config'
+ };
+ (window as any).hmsNavigate?.(viewMap[section.id]);
+ }}
+ className={`bg-gradient-to-br ${section.bgColor} rounded-xl p-5 border-2 ${section.borderColor} hover:shadow-lg transition-all group`}
+ >
+ <div className="flex items-center justify-between mb-3">
+ <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${section.color.replace('text-', 'bg-')}`}>
+ <Icon className="w-6 h-6 text-white" />
+ </div>
+ <ArrowRight className={`w-5 h-5 ${section.color} opacity-0 group-hover:opacity-100 transition-opacity`} />
+ </div>
+ <h3 className={`text-lg font-bold ${section.color.replace('-600', '-900')} mb-1`}>
+ {section.name}
+ </h3>
+ <p className={`text-sm ${section.color.replace('-600', '-700')}`}>
+ {section.description}
+ </p>
+ </button>
+ );
+ })}
  </div>
  </div>
 
