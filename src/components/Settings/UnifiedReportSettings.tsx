@@ -13,6 +13,8 @@ export function UnifiedReportSettings() {
   const [reportTime, setReportTime] = useState('23:00');
   const [includeWeekends, setIncludeWeekends] = useState(true);
   const [savingSettings, setSavingSettings] = useState(false);
+  const [generatingAuto, setGeneratingAuto] = useState(false);
+  const [autoDays, setAutoDays] = useState(30);
 
   useEffect(() => {
     loadSettings();
@@ -474,6 +476,40 @@ export function UnifiedReportSettings() {
     }
   };
 
+  const generateAutoReports = async () => {
+    if (!confirm(`Dette vil generere rapporter for de siste ${autoDays} dagene. Fortsette?`)) {
+      return;
+    }
+
+    try {
+      setGeneratingAuto(true);
+      const endDate = new Date();
+      const startDate = new Date();
+      startDate.setDate(startDate.getDate() - autoDays);
+
+      const currentDate = new Date(startDate);
+      let generatedCount = 0;
+
+      while (currentDate <= endDate) {
+        const dateStr = currentDate.toISOString().split('T')[0];
+        try {
+          await generateReportForDate(dateStr);
+          generatedCount++;
+        } catch (error) {
+          console.error(`Error generating report for ${dateStr}:`, error);
+        }
+        currentDate.setDate(currentDate.getDate() + 1);
+      }
+
+      alert(`${generatedCount} automatiske rapporter ble opprettet!`);
+    } catch (error: any) {
+      console.error('Error generating auto reports:', error);
+      alert('Feil ved generering av automatiske rapporter: ' + error.message);
+    } finally {
+      setGeneratingAuto(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -621,6 +657,43 @@ export function UnifiedReportSettings() {
               <p className="font-bold text-slate-800">Inkluder helger</p>
               <p className="text-sm text-slate-600">Generer også rapporter på lørdager og søndager</p>
             </label>
+          </div>
+
+          <div className="border-t-2 border-slate-200 pt-6">
+            <div className="mb-4">
+              <label className="block text-sm font-bold text-slate-700 mb-2">
+                Antall dager å generere
+              </label>
+              <input
+                type="number"
+                min="1"
+                max="90"
+                value={autoDays}
+                onChange={(e) => setAutoDays(parseInt(e.target.value) || 30)}
+                className="w-full px-4 py-3 border-2 border-slate-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500"
+              />
+              <p className="text-xs text-slate-500 mt-2">
+                Antall dager bakover fra i dag (maksimalt 90 dager)
+              </p>
+            </div>
+
+            <button
+              onClick={generateAutoReports}
+              disabled={generatingAuto}
+              className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-orange-600 text-white rounded-xl hover:bg-orange-700 transition-all font-bold disabled:opacity-50 disabled:cursor-not-allowed mb-4"
+            >
+              {generatingAuto ? (
+                <>
+                  <Loader className="w-5 h-5 animate-spin" />
+                  Genererer rapporter...
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="w-5 h-5" />
+                  Generer automatiske rapporter
+                </>
+              )}
+            </button>
           </div>
 
           <button
