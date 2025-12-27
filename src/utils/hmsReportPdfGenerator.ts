@@ -112,7 +112,7 @@ export async function generateHMSReportPDF(report: HMSReport, details: ReportDet
  checkNewPage(30);
  doc.setFillColor(255, 255, 255);
  doc.setDrawColor(200, 200, 200);
- doc.rect(margin, yPos, maxWidth, 'auto', 'S');
+ doc.setLineWidth(0.5);
 
  doc.setFontSize(12);
  doc.setFont('helvetica', 'bold');
@@ -169,7 +169,6 @@ export async function generateHMSReportPDF(report: HMSReport, details: ReportDet
  checkNewPage(30);
 
  doc.setFillColor(250, 250, 250);
- doc.rect(margin, yPos, maxWidth, 'auto', 'F');
 
  doc.setFontSize(12);
  doc.setFont('helvetica', 'bold');
@@ -214,7 +213,6 @@ export async function generateHMSReportPDF(report: HMSReport, details: ReportDet
  checkNewPage(30);
 
  doc.setFillColor(240, 255, 240);
- doc.rect(margin, yPos, maxWidth, 'auto', 'F');
 
  doc.setFontSize(12);
  doc.setFont('helvetica', 'bold');
@@ -256,7 +254,6 @@ export async function generateHMSReportPDF(report: HMSReport, details: ReportDet
  checkNewPage(30);
 
  doc.setFillColor(255, 240, 240);
- doc.rect(margin, yPos, maxWidth, 'auto', 'F');
 
  doc.setFontSize(12);
  doc.setFont('helvetica', 'bold');

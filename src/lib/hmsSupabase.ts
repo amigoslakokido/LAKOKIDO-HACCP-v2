@@ -94,17 +94,16 @@ export interface HMSAttachment {
 
 export interface HMSTrainingSession {
   id: string;
-  topic: string;
-  description: string;
-  session_date: string;
-  session_time: string;
-  duration_minutes: number;
-  trainer: string;
-  location: string;
-  attendees: string[];
-  attendance_count: number;
-  materials_url?: string;
-  certificate_issued: boolean;
+  employee_name: string;
+  employee_id?: string;
+  training_type: 'management' | 'fire_safety' | 'first_aid' | 'routine' | 'safety_equipment' | 'new_employee' | 'other';
+  training_name: string;
+  training_date: string;
+  completion_date?: string;
+  status: 'completed' | 'in_progress' | 'expired' | 'pending';
+  documentation_url?: string;
+  reference_id?: string;
+  notes?: string;
   created_at: string;
 }
 
@@ -228,9 +227,9 @@ export const hmsApi = {
   // Training
   async getTrainingSessions() {
     const { data, error } = await supabase
-      .from('hms_training')
+      .from('training_log')
       .select('*')
-      .order('session_date', { ascending: false });
+      .order('training_date', { ascending: false });
     return { data, error };
   },
 
@@ -246,7 +245,7 @@ export const hmsApi = {
   // Training
   async createTrainingSession(session: Partial<HMSTrainingSession>) {
     const { data, error } = await supabase
-      .from('hms_training')
+      .from('training_log')
       .insert(session)
       .select()
       .single();

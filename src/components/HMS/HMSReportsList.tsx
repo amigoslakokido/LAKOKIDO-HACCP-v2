@@ -65,7 +65,7 @@ export function HMSReportsList() {
  }) || [];
 
  const filteredTraining = training?.filter(t => {
- const tDate = new Date(t.scheduled_date);
+ const tDate = new Date(t.training_date || t.scheduled_date);
  return tDate >= startDate && tDate <= endDate;
  }) || [];
 
@@ -118,7 +118,7 @@ export function HMSReportsList() {
 
  const filteredTraining = training.filter(t => {
  try {
- const tDate = new Date(t.scheduled_date);
+ const tDate = new Date(t.training_date || t.scheduled_date);
  return tDate >= startDate && tDate <= endDate;
  } catch {
  return false;
