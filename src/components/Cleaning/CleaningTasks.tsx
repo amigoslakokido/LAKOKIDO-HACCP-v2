@@ -2,8 +2,10 @@ import { useState, useEffect } from 'react';
 import { supabase, CleaningTask, CleaningLog } from '../../lib/supabase';
 import { Sparkles, Check, X, Users, MessageSquare } from 'lucide-react';
 import HygieneChecks from '../Hygiene/HygieneChecks';
+import { useCompany } from '../../contexts/CompanyContext';
 
 export function CleaningTasks() {
+ const { currentCompany, loading: companyLoading } = useCompany();
  const [activeTab, setActiveTab] = useState<'cleaning' | 'hygiene'>('cleaning');
  const [tasks, setTasks] = useState<CleaningTask[]>([]);
  const [logs, setLogs] = useState<Record<string, CleaningLog>>({});
@@ -13,14 +15,19 @@ export function CleaningTasks() {
  const [notes, setNotes] = useState('');
 
  useEffect(() => {
- loadData();
- }, [selectedMonth]);
+ if (currentCompany) {
+  loadData();
+ }
+ }, [selectedMonth, currentCompany]);
 
  const loadData = async () => {
+ if (!currentCompany) return;
+
  try {
  const { data: tasksData } = await supabase
  .from('cleaning_tasks')
  .select('*')
+ .eq('company_id', currentCompany.id)
  .eq('active', true)
  .order('frequency', { ascending: true });
 
@@ -36,6 +43,7 @@ export function CleaningTasks() {
  const { data: logsData } = await supabase
  .from('cleaning_logs')
  .select('*')
+ .eq('company_id', currentCompany.id)
  .gte('log_date', startDate)
  .lt('log_date', endDateStr);
 
@@ -71,7 +79,7 @@ export function CleaningTasks() {
  };
 
  const saveNotes = async () => {
- if (!notesModal) return;
+ if (!notesModal || !currentCompany) return;
 
  const { taskId, date } = notesModal;
  const key = `${taskId}-${date}`;
@@ -85,6 +93,7 @@ export function CleaningTasks() {
  notes: notes.trim(),
  })
  .eq('id', existingLog.id)
+ .eq('company_id', currentCompany.id)
  .select()
  .single();
 
@@ -97,6 +106,7 @@ export function CleaningTasks() {
  .from('cleaning_logs')
  .select('*')
  .eq('task_id', taskId)
+ .eq('company_id', currentCompany.id)
  .eq('log_date', date)
  .maybeSingle();
 
@@ -108,6 +118,7 @@ export function CleaningTasks() {
  notes: notes.trim(),
  })
  .eq('id', checkData.id)
+ .eq('company_id', currentCompany.id)
  .select()
  .single();
 
@@ -124,6 +135,7 @@ export function CleaningTasks() {
  is_completed: false,
  completed_by: '00000000-0000-0000-0000-000000000000',
  notes: notes.trim(),
+ company_id: currentCompany.id,
  })
  .select()
  .single();
@@ -141,6 +153,8 @@ export function CleaningTasks() {
  };
 
  const toggleTask = async (taskId: string, date: string, currentStatus: boolean) => {
+ if (!currentCompany) return;
+
  const key = `${taskId}-${date}`;
  const existingLog = logs[key];
 
@@ -154,6 +168,7 @@ export function CleaningTasks() {
  completed_at: !currentStatus ? new Date().toISOString() : null,
  })
  .eq('id', existingLog.id)
+ .eq('company_id', currentCompany.id)
  .select()
  .single();
 
@@ -166,6 +181,7 @@ export function CleaningTasks() {
  .from('cleaning_logs')
  .select('*')
  .eq('task_id', taskId)
+ .eq('company_id', currentCompany.id)
  .eq('log_date', date)
  .maybeSingle();
 
@@ -179,6 +195,7 @@ export function CleaningTasks() {
  completed_at: new Date().toISOString(),
  })
  .eq('id', checkData.id)
+ .eq('company_id', currentCompany.id)
  .select()
  .single();
 
@@ -195,6 +212,7 @@ export function CleaningTasks() {
  is_completed: true,
  completed_by: '00000000-0000-0000-0000-000000000000',
  completed_at: new Date().toISOString(),
+ company_id: currentCompany.id,
  })
  .select()
  .single();
