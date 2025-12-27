@@ -21,6 +21,8 @@ import { DocumentsManager } from './DocumentsManager';
 import { AutoReportsGenerator } from '../Settings/AutoReportsGenerator';
 import { UnifiedReports } from './UnifiedReports';
 import { AISettings } from './AISettings';
+import CompanySwitcher from '../Company/CompanySwitcher';
+import { useCompany } from '../../contexts/CompanyContext';
 import {
   LayoutDashboard,
   AlertTriangle,
@@ -64,6 +66,7 @@ import {
 } from 'lucide-react';
 
 export function HMSApp() {
+  const { currentCompany } = useCompany();
   const [currentView, setCurrentView] = useState('dashboard');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [expandedItems, setExpandedItems] = useState<string[]>(['dashboard']);
@@ -157,54 +160,56 @@ export function HMSApp() {
   );
 
   const renderView = () => {
+    const companyKey = currentCompany?.id || 'default';
+
     switch (currentView) {
       case 'dashboard-overview':
       case 'dashboard':
-        return <HMSDashboard />;
+        return <HMSDashboard key={companyKey} />;
       case 'goals-hms':
-        return <Goals />;
+        return <Goals key={companyKey} />;
       case 'goals-policies':
-        return <Policies />;
+        return <Policies key={companyKey} />;
       case 'goals-orgchart':
-        return <OrganizationChart />;
+        return <OrganizationChart key={companyKey} />;
       case 'employees-list':
-        return <PersonalList />;
+        return <PersonalList key={companyKey} />;
       case 'employees-verneombud':
-        return <SafetyRepresentative />;
+        return <SafetyRepresentative key={companyKey} />;
       case 'company-info':
-        return <CompanySettings />;
+        return <CompanySettings key={companyKey} />;
       case 'company-insurance':
-        return <Insurance />;
+        return <Insurance key={companyKey} />;
       case 'hms-training':
-        return <HMSTraining />;
+        return <HMSTraining key={companyKey} />;
       case 'incidents-main':
-        return <IncidentsMain />;
+        return <IncidentsMain key={companyKey} />;
       case 'environment-main':
-        return <EnvironmentMain />;
+        return <EnvironmentMain key={companyKey} />;
       case 'health-firstaid':
-        return <FirstAid />;
+        return <FirstAid key={companyKey} />;
       case 'health-risk':
-        return <RiskAssessment />;
+        return <RiskAssessment key={companyKey} />;
       case 'health-work-env':
-        return <WorkEnvironment />;
+        return <WorkEnvironment key={companyKey} />;
       case 'emergency-fire':
-        return <FireSafety />;
+        return <FireSafety key={companyKey} />;
       case 'emergency-evacuation':
-        return <Evacuation />;
+        return <Evacuation key={companyKey} />;
       case 'control-maintenance':
-        return <Maintenance />;
+        return <Maintenance key={companyKey} />;
       case 'settings-ai-config':
-        return <AISettings />;
+        return <AISettings key={companyKey} />;
       case 'settings-ai':
-        return <AutoReportsGenerator />;
+        return <AutoReportsGenerator key={companyKey} />;
       case 'documents-manager':
-        return <DocumentsManager />;
+        return <DocumentsManager key={companyKey} />;
       case 'documents-laws':
-        return <PlaceholderView icon={Scale} name="Lovverk" />;
+        return <PlaceholderView key={companyKey} icon={Scale} name="Lovverk" />;
       case 'reports-all':
-        return <UnifiedReports />;
+        return <UnifiedReports key={companyKey} />;
       case 'settings-reports':
-        return <AutoReportsGenerator />;
+        return <AutoReportsGenerator key={companyKey} />;
 
       default:
         const currentItem = navigationItems
@@ -213,10 +218,11 @@ export function HMSApp() {
 
         return currentItem ? (
           <PlaceholderView
+            key={companyKey}
             icon={currentItem.icon}
             name={currentItem.name}
           />
-        ) : <HMSDashboard />;
+        ) : <HMSDashboard key={companyKey} />;
     }
   };
 
@@ -224,9 +230,9 @@ export function HMSApp() {
     <div className="flex min-h-screen bg-slate-50">
       <aside className={`fixed inset-y-0 left-0 z-50 w-72 bg-white border-r border-slate-200 transform transition-transform duration-200 ease-in-out ${
         mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
-      } lg:translate-x-0 overflow-y-auto`}>
+      } lg:translate-x-0 overflow-y-auto mt-16`}>
         <div className="p-6 border-b border-slate-200">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 mb-4">
             <div className="w-12 h-12 bg-gradient-to-br from-purple-600 to-pink-600 rounded-xl flex items-center justify-center">
               <Shield className="w-7 h-7 text-white" />
             </div>
@@ -234,6 +240,9 @@ export function HMSApp() {
               <h1 className="text-xl font-black text-slate-900">HMS System</h1>
               <p className="text-xs text-slate-600">Internkontroll</p>
             </div>
+          </div>
+          <div className="mt-3">
+            <CompanySwitcher />
           </div>
         </div>
 
@@ -297,17 +306,19 @@ export function HMSApp() {
       </aside>
 
       <div className="flex-1 lg:ml-72">
-        <header className="sticky top-0 z-40 bg-white border-b border-slate-200">
+        <header className="sticky top-16 z-40 bg-white border-b border-slate-200">
           <div className="px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-            <button
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="lg:hidden p-2 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
-            >
-              {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-            </button>
+            <div className="flex items-center gap-4">
+              <button
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                className="lg:hidden p-2 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+              >
+                {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+              </button>
 
-            <div className="flex-1 lg:flex-none">
-              <h2 className="text-lg font-bold text-slate-900 lg:hidden">HMS System</h2>
+              <div className="flex-1 lg:flex-none">
+                <h2 className="text-lg font-bold text-slate-900 lg:hidden">HMS System</h2>
+              </div>
             </div>
 
             <div className="text-sm text-slate-500">
