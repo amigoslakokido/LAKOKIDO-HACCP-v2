@@ -33,11 +33,10 @@ export async function generateHMSReportPDF(report: HMSReport, details: ReportDet
  const pageWidth = doc.internal.pageSize.width;
  const pageHeight = doc.internal.pageSize.height;
  const margin = 15;
- const maxWidth = pageWidth2 * margin;
+ const maxWidth = pageWidth - 2 * margin;
 
- // of 
  const checkNewPage = (requiredSpace: number = 20) => {
- if (yPos + requiredSpace > pageHeight20) {
+ if (yPos + requiredSpace > pageHeight - 20) {
  doc.addPage();
  yPos = 20;
  return true;
@@ -45,8 +44,7 @@ export async function generateHMSReportPDF(report: HMSReport, details: ReportDet
  return false;
  };
 
- // 
- const addWrappedText = (text: string, x: number, fontSize: number = 10, maxWidth: number = pageWidth2 * margin) => {
+ const addWrappedText = (text: string, x: number, fontSize: number = 10, maxWidth: number = pageWidth - 2 * margin) => {
  doc.setFontSize(fontSize);
  const lines = doc.splitTextToSize(text, maxWidth);
  lines.forEach((line: string) => {
@@ -80,7 +78,7 @@ export async function generateHMSReportPDF(report: HMSReport, details: ReportDet
  month: 'long',
  day: 'numeric'
  });
- doc.text(`Generert: ${generatedDate}`, pageWidthmargin, 43, { align: 'right' });
+ doc.text(`Generert: ${generatedDate}`, pageWidth - margin, 43, { align: 'right' });
 
  yPos = 60;
 
@@ -125,7 +123,7 @@ export async function generateHMSReportPDF(report: HMSReport, details: ReportDet
  doc.setFontSize(10);
  doc.setFont('helvetica', 'normal');
  doc.setTextColor(0, 0, 0);
- addWrappedText(report.summary, margin + 5, 10, maxWidth10);
+ addWrappedText(report.summary, margin + 5, 10, maxWidth - 10);
 
  yPos += 10;
 
@@ -196,13 +194,13 @@ export async function generateHMSReportPDF(report: HMSReport, details: ReportDet
  doc.setFont('helvetica', 'bold');
  doc.text('•', margin + 5, yPos);
  doc.setFont('helvetica', 'normal');
- const textLines = doc.splitTextToSize(line.substring(1).trim(), maxWidth15);
+ const textLines = doc.splitTextToSize(line.substring(1).trim(), maxWidth - 15);
  textLines.forEach((textLine: string) => {
  doc.text(textLine, margin + 10, yPos);
  yPos += 5;
  });
  } else {
- addWrappedText(line, margin + 5, 9, maxWidth10);
+ addWrappedText(line, margin + 5, 9, maxWidth - 10);
  }
  yPos += 2;
  }
@@ -238,13 +236,13 @@ export async function generateHMSReportPDF(report: HMSReport, details: ReportDet
  checkNewPage();
  if (line.startsWith('•')) {
  doc.text('•', margin + 5, yPos);
- const textLines = doc.splitTextToSize(line.substring(1).trim(), maxWidth15);
+ const textLines = doc.splitTextToSize(line.substring(1).trim(), maxWidth - 15);
  textLines.forEach((textLine: string) => {
  doc.text(textLine, margin + 10, yPos);
  yPos += 5;
  });
  } else {
- addWrappedText(line, margin + 5, 9, maxWidth10);
+ addWrappedText(line, margin + 5, 9, maxWidth - 10);
  }
  yPos += 2;
  }
@@ -271,7 +269,7 @@ export async function generateHMSReportPDF(report: HMSReport, details: ReportDet
  checkNewPage(25);
 
  doc.setFillColor(250, 250, 250);
- doc.rect(margin + 5, yPos, maxWidth10, 20, 'F');
+ doc.rect(margin + 5, yPos, maxWidth - 10, 20, 'F');
 
  doc.setFontSize(10);
  doc.setFont('helvetica', 'bold');
@@ -297,13 +295,13 @@ export async function generateHMSReportPDF(report: HMSReport, details: ReportDet
  doc.text(
  `Side ${i} av ${pageCount}`,
  pageWidth / 2,
- pageHeight10,
+ pageHeight - 10,
  { align: 'center' }
  );
  doc.text(
- 'Amigos la Kokido ASHMS Rapport',
+ 'Amigos la Kokido AS - HMS Rapport',
  margin,
- pageHeight10
+ pageHeight - 10
  );
  }
 
