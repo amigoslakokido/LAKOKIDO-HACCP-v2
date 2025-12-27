@@ -2,10 +2,8 @@ import { useState, useEffect } from 'react';
 import { supabase, Zone, Equipment, TemperatureLog, Employee } from '../../lib/supabase';
 import { Thermometer, Save, Edit2, AlertTriangle, Snowflake } from 'lucide-react';
 import CoolingLog from '../Cooling/CoolingLog';
-import { useCompany } from '../../contexts/CompanyContext';
 
 export function TemperatureControl() {
-  const { currentCompany, loading: companyLoading } = useCompany();
   const [activeTab, setActiveTab] = useState<'temperature' | 'cooling'>('temperature');
   const [zones, setZones] = useState<(Zone & { equipment: Equipment[] })[]>([]);
   const [logs, setLogs] = useState<Record<string, TemperatureLog>>({});
@@ -15,19 +13,14 @@ export function TemperatureControl() {
   const [employees, setEmployees] = useState<Employee[]>([]);
 
   useEffect(() => {
-    if (currentCompany) {
-      loadData();
-    }
-  }, [currentCompany]);
+    loadData();
+  }, []);
 
   const loadData = async () => {
-    if (!currentCompany) return;
-
     try {
       const { data: zonesData, error: zonesError } = await supabase
         .from('zones')
         .select('*')
-        .eq('company_id', currentCompany.id)
         .order('name');
 
       console.log('Zones data:', zonesData, 'Error:', zonesError);
@@ -35,7 +28,6 @@ export function TemperatureControl() {
       const { data: employeesData } = await supabase
         .from('employees')
         .select('*')
-        .eq('company_id', currentCompany.id)
         .eq('active', true);
 
       if (employeesData) {
@@ -49,7 +41,6 @@ export function TemperatureControl() {
               .from('equipment')
               .select('*')
               .eq('zone_id', zone.id)
-              .eq('company_id', currentCompany.id)
               .eq('active', true)
               .order('name');
 
@@ -66,7 +57,6 @@ export function TemperatureControl() {
         const { data: logsData } = await supabase
           .from('temperature_logs')
           .select('*')
-          .eq('company_id', currentCompany.id)
           .eq('log_date', today);
 
         if (logsData) {
@@ -120,8 +110,6 @@ export function TemperatureControl() {
   };
 
   const saveTemperature = async (equipmentId: string, equipment: Equipment) => {
-    if (!currentCompany) return;
-
     const temp = parseFloat(temperatures[equipmentId]);
     if (isNaN(temp)) return;
 
@@ -143,7 +131,6 @@ export function TemperatureControl() {
             status,
           })
           .eq('id', existingLog.id)
-          .eq('company_id', currentCompany.id)
           .select()
           .single();
 
@@ -155,7 +142,6 @@ export function TemperatureControl() {
           .from('temperature_logs')
           .select('*')
           .eq('equipment_id', equipmentId)
-          .eq('company_id', currentCompany.id)
           .eq('log_date', today)
           .maybeSingle();
 
@@ -167,7 +153,6 @@ export function TemperatureControl() {
               status,
             })
             .eq('id', checkData.id)
-            .eq('company_id', currentCompany.id)
             .select()
             .single();
 
@@ -184,7 +169,6 @@ export function TemperatureControl() {
               recorded_by: defaultEmployeeId,
               log_date: today,
               log_time: timeString,
-              company_id: currentCompany.id,
             })
             .select()
             .single();
@@ -219,7 +203,7 @@ export function TemperatureControl() {
     return null;
   };
 
-  if (companyLoading || loading || !currentCompany) {
+  if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="text-slate-600">Laster...</div>

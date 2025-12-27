@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { Snowflake, Plus, Calendar, Clock, AlertCircle, Thermometer } from 'lucide-react';
-import { useCompany } from '../../contexts/CompanyContext';
 
 interface CoolingLog {
   id: string;
@@ -18,7 +17,6 @@ interface CoolingLog {
 }
 
 export default function CoolingLog() {
-  const { currentCompany, loading: companyLoading } = useCompany();
   const [logs, setLogs] = useState<CoolingLog[]>([]);
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [loading, setLoading] = useState(true);
@@ -42,19 +40,14 @@ export default function CoolingLog() {
   ];
 
   useEffect(() => {
-    if (currentCompany) {
-      loadLogs();
-    }
-  }, [selectedDate, currentCompany]);
+    loadLogs();
+  }, [selectedDate]);
 
   const loadLogs = async () => {
-    if (!currentCompany) return;
-
     setLoading(true);
     const { data, error } = await supabase
       .from('cooling_logs')
       .select('*')
-      .eq('company_id', currentCompany.id)
       .eq('log_date', selectedDate)
       .order('created_at', { ascending: false });
 
@@ -78,7 +71,6 @@ export default function CoolingLog() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!currentCompany) return;
 
     const initialTemp = parseFloat(formData.initial_temp);
     const finalTemp = parseFloat(formData.final_temp);
@@ -98,8 +90,7 @@ export default function CoolingLog() {
           start_time: startTime,
           end_time: endTime,
           within_limits: withinLimits,
-          notes: formData.notes || (withinLimits ? 'Godkjent nedkjøling' : 'Ikke godkjent – For langsom nedkjøling'),
-          company_id: currentCompany.id
+          notes: formData.notes || (withinLimits ? 'Godkjent nedkjøling' : 'Ikke godkjent – For langsom nedkjøling')
         });
 
       if (!error) {
