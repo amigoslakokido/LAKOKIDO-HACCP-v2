@@ -232,19 +232,14 @@ export function UnifiedReportSettings() {
     });
   };
 
-  const generateReportForDate = async (dateStr: string) => {
+  const generateReportForDate = async (dateStr: string): Promise<boolean> => {
     const { data: existingReport } = await supabase
       .from('haccp_daily_reports')
       .select('id')
       .eq('report_date', dateStr)
       .maybeSingle();
 
-    if (existingReport) {
-      await supabase
-        .from('haccp_daily_reports')
-        .delete()
-        .eq('report_date', dateStr);
-    }
+    // Don't delete existing report until we successfully create the new one
 
     const [tempResult, cleanResult, hygieneResult, coolingResult] = await Promise.all([
       supabase
@@ -402,21 +397,41 @@ export function UnifiedReportSettings() {
     const randomMinute = Math.floor(Math.random() * 60);
     reportDateTime.setHours(randomHour, randomMinute, 0, 0);
 
+    const reportData = {
+      report_date: dateStr,
+      generated_at: reportDateTime.toISOString(),
+      generated_by: 'Gourg Brsoum',
+      report_type: 'manual' as const,
+      overall_status: overallStatus,
+      temperature_data: temperatureData || [],
+      cleaning_data: cleaningData || [],
+      hygiene_data: hygieneData || [],
+      cooling_data: coolingData || []
+    };
+
+    // If report exists, delete it first, then insert new one
+    if (existingReport) {
+      const { error: deleteError } = await supabase
+        .from('haccp_daily_reports')
+        .delete()
+        .eq('report_date', dateStr);
+
+      if (deleteError) {
+        console.error('Error deleting existing report:', deleteError);
+        throw deleteError;
+      }
+    }
+
     const { error: insertError } = await supabase
       .from('haccp_daily_reports')
-      .insert({
-        report_date: dateStr,
-        generated_at: reportDateTime.toISOString(),
-        generated_by: 'Gourg Brsoum',
-        report_type: 'manual',
-        overall_status: overallStatus,
-        temperature_data: temperatureData || [],
-        cleaning_data: cleaningData || [],
-        hygiene_data: hygieneData || [],
-        cooling_data: coolingData || []
-      });
+      .insert(reportData);
 
-    if (insertError) throw insertError;
+    if (insertError) {
+      console.error('Error inserting report:', insertError);
+      throw insertError;
+    }
+
+    return true;
   };
 
   const generateReport = async () => {
@@ -448,19 +463,29 @@ export function UnifiedReportSettings() {
 
         const currentDate = new Date(startDate);
         let generatedCount = 0;
+        let failedCount = 0;
 
         while (currentDate <= endDate) {
           const dateStr = currentDate.toISOString().split('T')[0];
           try {
-            await generateReportForDate(dateStr);
-            generatedCount++;
+            const success = await generateReportForDate(dateStr);
+            if (success) {
+              generatedCount++;
+            } else {
+              failedCount++;
+            }
           } catch (error) {
             console.error(`Error generating report for ${dateStr}:`, error);
+            failedCount++;
           }
           currentDate.setDate(currentDate.getDate() + 1);
         }
 
-        alert(`${generatedCount} rapporter ble opprettet!`);
+        if (failedCount > 0) {
+          alert(`${generatedCount} rapporter ble opprettet!\n${failedCount} rapporter feilet.`);
+        } else {
+          alert(`${generatedCount} rapporter ble opprettet!`);
+        }
       } else {
         const { data: existingReport } = await supabase
           .from('haccp_daily_reports')
@@ -475,8 +500,12 @@ export function UnifiedReportSettings() {
           }
         }
 
-        await generateReportForDate(selectedDate);
-        alert(`Rapport for ${new Date(selectedDate).toLocaleDateString('no-NO')} er opprettet!`);
+        const success = await generateReportForDate(selectedDate);
+        if (success) {
+          alert(`Rapport for ${new Date(selectedDate).toLocaleDateString('no-NO')} er opprettet!`);
+        } else {
+          alert('Feil ved generering av rapport');
+        }
       }
     } catch (error: any) {
       console.error('Error generating report:', error);
@@ -499,19 +528,29 @@ export function UnifiedReportSettings() {
 
       const currentDate = new Date(startDate);
       let generatedCount = 0;
+      let failedCount = 0;
 
       while (currentDate <= endDate) {
         const dateStr = currentDate.toISOString().split('T')[0];
         try {
-          await generateReportForDate(dateStr);
-          generatedCount++;
+          const success = await generateReportForDate(dateStr);
+          if (success) {
+            generatedCount++;
+          } else {
+            failedCount++;
+          }
         } catch (error) {
           console.error(`Error generating report for ${dateStr}:`, error);
+          failedCount++;
         }
         currentDate.setDate(currentDate.getDate() + 1);
       }
 
-      alert(`${generatedCount} automatiske rapporter ble opprettet!`);
+      if (failedCount > 0) {
+        alert(`${generatedCount} automatiske rapporter ble opprettet!\n${failedCount} rapporter feilet.`);
+      } else {
+        alert(`${generatedCount} automatiske rapporter ble opprettet!`);
+      }
     } catch (error: any) {
       console.error('Error generating auto reports:', error);
       alert('Feil ved generering av automatiske rapporter: ' + error.message);
