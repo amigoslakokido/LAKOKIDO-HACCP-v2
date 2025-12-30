@@ -15,14 +15,28 @@ export function UnifiedReportSettings() {
   const [savingSettings, setSavingSettings] = useState(false);
   const [generatingAuto, setGeneratingAuto] = useState(false);
   const [autoDays, setAutoDays] = useState(30);
+  const [companyId, setCompanyId] = useState<string | null>(null);
 
   useEffect(() => {
-    loadSettings();
+    loadCompanyAndSettings();
   }, []);
 
-  const loadSettings = async () => {
+  const loadCompanyAndSettings = async () => {
     try {
       setLoading(true);
+
+      // Get company ID
+      const { data: company } = await supabase
+        .from('companies')
+        .select('id')
+        .limit(1)
+        .maybeSingle();
+
+      if (company) {
+        setCompanyId(company.id);
+      }
+
+      // Load settings
       const { data, error } = await supabase
         .from('scheduled_reports_config')
         .select('*')
@@ -233,10 +247,16 @@ export function UnifiedReportSettings() {
   };
 
   const generateReportForDate = async (dateStr: string): Promise<boolean> => {
+    if (!companyId) {
+      console.error('Company ID not found');
+      return false;
+    }
+
     const { data: existingReport } = await supabase
       .from('haccp_daily_reports')
       .select('id')
       .eq('report_date', dateStr)
+      .eq('company_id', companyId)
       .maybeSingle();
 
     // Don't delete existing report until we successfully create the new one
@@ -261,6 +281,7 @@ export function UnifiedReportSettings() {
           )
         `)
         .eq('log_date', dateStr)
+        .eq('company_id', companyId)
         .order('log_time', { ascending: false }),
 
       supabase
@@ -279,17 +300,20 @@ export function UnifiedReportSettings() {
           )
         `)
         .eq('log_date', dateStr)
+        .eq('company_id', companyId)
         .order('log_time', { ascending: false }),
 
       supabase
         .from('hygiene_checks')
         .select('*')
-        .eq('check_date', dateStr),
+        .eq('check_date', dateStr)
+        .eq('company_id', companyId),
 
       supabase
         .from('cooling_logs')
         .select('*')
         .eq('log_date', dateStr)
+        .eq('company_id', companyId)
         .order('start_time', { ascending: false })
     ]);
 
@@ -398,6 +422,7 @@ export function UnifiedReportSettings() {
     reportDateTime.setHours(randomHour, randomMinute, 0, 0);
 
     const reportData = {
+      company_id: companyId,
       report_date: dateStr,
       generated_at: reportDateTime.toISOString(),
       generated_by: 'Gourg Brsoum',
@@ -414,7 +439,8 @@ export function UnifiedReportSettings() {
       const { error: deleteError } = await supabase
         .from('haccp_daily_reports')
         .delete()
-        .eq('report_date', dateStr);
+        .eq('report_date', dateStr)
+        .eq('company_id', companyId);
 
       if (deleteError) {
         console.error('Error deleting existing report:', deleteError);
@@ -487,10 +513,17 @@ export function UnifiedReportSettings() {
           alert(`${generatedCount} rapporter ble opprettet!`);
         }
       } else {
+        if (!companyId) {
+          alert('Finner ikke firma-ID. Vennligst last inn siden på nytt.');
+          setGenerating(false);
+          return;
+        }
+
         const { data: existingReport } = await supabase
           .from('haccp_daily_reports')
           .select('id')
           .eq('report_date', selectedDate)
+          .eq('company_id', companyId)
           .maybeSingle();
 
         if (existingReport) {
