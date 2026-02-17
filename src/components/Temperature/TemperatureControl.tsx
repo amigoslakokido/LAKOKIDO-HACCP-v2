@@ -88,12 +88,16 @@ export function TemperatureControl() {
 
     // Check extended safe ranges for specific equipment types
     if (isFreezer) {
+      // Freezers: negative temperatures are always safe
+      if (temp < 0) return 'safe';
       // Freezers: -25 to -32 is acceptable (7 degrees below min is safe)
       if (temp >= min - 7 && temp < min) return 'safe';
       // Warning range: slightly outside extended range
       if (temp >= min - 10 && temp < min - 7) return 'warning';
       if (temp > max && temp <= max + 2) return 'warning';
     } else if (isRefrigerator) {
+      // Refrigerators: negative temperatures are always safe
+      if (temp < 0) return 'safe';
       // Refrigerators: -2 to -3 is acceptable (1 degree below min is safe)
       if (temp >= min - 1 && temp < min) return 'safe';
       // Warning range: slightly outside extended range
