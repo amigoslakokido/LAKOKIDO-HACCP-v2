@@ -78,7 +78,7 @@ Deno.serve(async (req: Request) => {
           const randomTime = `${String(baseHour).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:00`;
           
           const rand = Math.random() * 100;
-          const status = rand < 2 ? 'danger' : (rand < 5 ? 'warning' : 'safe');
+          const status = rand < 0.5 ? 'danger' : (rand < 1.5 ? 'warning' : 'safe');
           
           let temperature: number;
           if (status === 'danger') {
@@ -116,9 +116,9 @@ Deno.serve(async (req: Request) => {
         const baseHour = 13 + Math.floor(idx / 2);
         const minutes = Math.floor(Math.random() * 40);
         const randomTime = `${String(baseHour).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:00`;
-        
+
         const rand = Math.random() * 100;
-        const status = rand < 2 ? 'danger' : (rand < 5 ? 'warning' : 'safe');
+        const status = rand < 0.5 ? 'danger' : (rand < 1.5 ? 'warning' : 'safe');
 
         return {
           id: `auto-clean-${idx}-${dateStr}`,
@@ -165,11 +165,11 @@ Deno.serve(async (req: Request) => {
         const endTime = `${String(baseEndHour).padStart(2, '0')}:${String(endMinutes).padStart(2, '0')}:00`;
         
         const rand = Math.random() * 100;
-        const status = rand < 2 ? 'danger' : (rand < 5 ? 'warning' : 'safe');
-        
+        const status = rand < 0.5 ? 'danger' : (rand < 1.5 ? 'warning' : 'safe');
+
         const initial_temp = 65 + Math.random() * 10;
         let final_temp: number;
-        
+
         if (status === 'safe') {
           final_temp = 2 + Math.random() * 2;
         } else if (status === 'warning') {
@@ -246,15 +246,20 @@ Deno.serve(async (req: Request) => {
     let overallStatus: 'pass' | 'warning' | 'fail' = 'pass';
     const dangerTemps = temperatureData.filter((t: any) => t.status === 'danger');
     const warningTemps = temperatureData.filter((t: any) => t.status === 'warning');
-    
+
     if (dangerTemps.length > 0) {
       overallStatus = 'fail';
-    } else if (warningTemps.length > 0) {
+    } else if (warningTemps.length >= 3) {
       overallStatus = 'warning';
     }
 
     const incompleteTasks = cleaningData.filter((c: any) => !c.completed);
-    if (incompleteTasks.length > 0 && overallStatus === 'pass') {
+    if (incompleteTasks.length > 2 && overallStatus === 'pass') {
+      overallStatus = 'warning';
+    }
+
+    const failedCooling = coolingData.filter((c: any) => !c.within_limits);
+    if (failedCooling.length > 0 && overallStatus === 'pass') {
       overallStatus = 'warning';
     }
 
