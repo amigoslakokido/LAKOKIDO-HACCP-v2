@@ -26,9 +26,11 @@ interface Props {
 
 export function HACCPReportViewer({ report, onClose }: Props) {
   const [companyInfo, setCompanyInfo] = useState<any>(null);
+  const [employees, setEmployees] = useState<string[]>([]);
 
   useEffect(() => {
     loadCompanyInfo();
+    loadEmployees();
   }, []);
 
   const loadCompanyInfo = async () => {
@@ -44,6 +46,38 @@ export function HACCPReportViewer({ report, onClose }: Props) {
     } catch (error) {
       console.error('Error loading company info:', error);
     }
+  };
+
+  const loadEmployees = async () => {
+    try {
+      const { data } = await supabase
+        .from('employees')
+        .select('name, role')
+        .eq('active', true)
+        .eq('status', 'active')
+        .order('name');
+
+      if (data && data.length > 0) {
+        setEmployees(data.map(e => e.name));
+      }
+    } catch (error) {
+      console.error('Error loading employees:', error);
+    }
+  };
+
+  // Fallback if employees haven't loaded yet
+  const getEmployeeList = () => {
+    return employees.length > 0 ? employees : ['Gourg Brsoum', 'Feras Al Matrood', 'Hani Tamer', 'Kosai Alshahadat'];
+  };
+
+  // Reports before August 2026 were under the old company name
+  const getCompanyName = () => {
+    const reportDate = new Date(report.report_date);
+    const cutoff = new Date('2026-08-01');
+    if (reportDate < cutoff) {
+      return 'Amigos la Kokido AS';
+    }
+    return companyInfo?.company_name || 'Nordic food drift AS';
   };
 
   const getTempLimits = (zoneName: string, equipmentName: string) => {
@@ -96,45 +130,35 @@ export function HACCPReportViewer({ report, onClose }: Props) {
     return grouped;
   };
 
-  // Get employee name based on day of week and time
+  // Get employee name based on time — distributes across all active employees
   const getResponsibleEmployee = (logTime: string, reportDate: string) => {
-    const date = new Date(reportDate);
-    const dayOfWeek = date.getDay();
+    const allEmployees = getEmployeeList();
+    if (allEmployees.length === 0) return 'Ukjent';
+    if (allEmployees.length === 1) return allEmployees[0];
+
     const timeStr = logTime || '12:00:00';
     const hour = parseInt(timeStr.substring(0, 2));
+    const minute = parseInt(timeStr.substring(3, 5));
+    const totalMinutes = hour * 60 + minute;
 
-    // Active employees only
-    const allEmployees = ['Gourg Brsoum', 'Elias Aldakhil', 'Feras Al Matrood', 'George Kondraq'];
+    // Working hours ~10:00–22:00 (720 min span), divide evenly among employees
+    const workStart = 10 * 60;
+    const workEnd = 22 * 60;
+    const clamped = Math.max(workStart, Math.min(totalMinutes, workEnd));
+    const slotSize = (workEnd - workStart) / allEmployees.length;
+    const empIndex = Math.min(Math.floor((clamped - workStart) / slotSize), allEmployees.length - 1);
 
-    // Monday-Thursday: 2 employees
-    if (dayOfWeek >= 1 && dayOfWeek <= 4) {
-      return hour < 15 ? allEmployees[0] : allEmployees[1];
-    }
-
-    // Friday (5), Saturday (6), Sunday (0): 4 employees
-    const empIndex = Math.floor((hour - 10) / 3) % allEmployees.length;
-    return allEmployees[Math.max(0, Math.min(empIndex, allEmployees.length - 1))];
+    return allEmployees[Math.max(0, empIndex)];
   };
 
-  // Get all employees working on this day
-  const getWorkingEmployees = (reportDate: string) => {
-    const date = new Date(reportDate);
-    const dayOfWeek = date.getDay();
-
-    // Active employees only
-    const weekdayEmployees = ['Gourg Brsoum', 'Elias Aldakhil'];
-    const weekendEmployees = ['Gourg Brsoum', 'Elias Aldakhil', 'Feras Al Matrood', 'George Kondraq'];
-
-    if (dayOfWeek >= 1 && dayOfWeek <= 4) {
-      return weekdayEmployees;
-    }
-
-    return weekendEmployees;
+  // All active employees appear in the hygiene section
+  const getWorkingEmployees = () => {
+    return getEmployeeList();
   };
 
   const stats = countStatus();
   const groupedTemps = groupByZone();
-  const workingEmployees = getWorkingEmployees(report.report_date);
+  const workingEmployees = getWorkingEmployees();
 
   const downloadPDF = () => {
     const pdf = new jsPDF();
@@ -149,7 +173,7 @@ export function HACCPReportViewer({ report, onClose }: Props) {
     pdf.setFontSize(16);
     pdf.setFont('helvetica', 'bold');
     pdf.setTextColor(255, 255, 255);
-    pdf.text(companyInfo?.company_name || 'Amigos la Kokido AS', 20, 15);
+    pdf.text(getCompanyName(), 20, 15);
 
     pdf.setFontSize(9);
     pdf.setFont('helvetica', 'normal');

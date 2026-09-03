@@ -196,6 +196,11 @@ Deno.serve(async (req: Request) => {
       });
     };
 
+    const reportDateTime = new Date(today);
+    const randomHour = Math.floor(Math.random() * 14) + 8;
+    const randomMinute = Math.floor(Math.random() * 60);
+    reportDateTime.setHours(randomHour, randomMinute, 0, 0);
+
     const [tempResult, cleanResult, hygieneResult, coolingResult] = await Promise.all([
       supabase
         .from('temperature_logs')
@@ -267,7 +272,7 @@ Deno.serve(async (req: Request) => {
       .from('haccp_daily_reports')
       .insert({
         report_date: today,
-        generated_at: new Date().toISOString(),
+        generated_at: reportDateTime.toISOString(),
         generated_by: 'Automatisk system',
         report_type: 'automatic',
         overall_status: overallStatus,
