@@ -2,6 +2,7 @@ import { CheckCircle, XCircle, AlertTriangle, Thermometer, Sparkles, Droplet, Us
 import jsPDF from 'jspdf';
 import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
+import { REPORT_COMPANY_NAME } from '../../lib/companyBranding';
 
 interface HACCPReport {
   id: string;
@@ -70,14 +71,8 @@ export function HACCPReportViewer({ report, onClose }: Props) {
     return employees.length > 0 ? employees : ['Gourg Brsoum', 'Feras Al Matrood', 'Hani Tamer', 'Kosai Alshahadat'];
   };
 
-  // Reports before August 2026 were under the old company name
   const getCompanyName = () => {
-    const reportDate = new Date(report.report_date);
-    const cutoff = new Date('2026-08-01');
-    if (reportDate < cutoff) {
-      return 'Amigos la Kokido AS';
-    }
-    return companyInfo?.company_name || 'Nordic food drift AS';
+    return companyInfo?.company_name || REPORT_COMPANY_NAME;
   };
 
   const getTempLimits = (zoneName: string, equipmentName: string) => {

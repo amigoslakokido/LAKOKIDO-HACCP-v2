@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { hmsApi, HMSReport } from '../../lib/hmsSupabase';
 import { FileText, Plus, Download, CheckCircle, Clock, XCircle, Eye } from 'lucide-react';
 import jsPDF from 'jspdf';
+import { REPORT_COMPANY_NAME } from '../../lib/companyBranding';
 
 export function Reports() {
   const [reports, setReports] = useState<HMSReport[]>([]);
@@ -140,7 +141,7 @@ export function Reports() {
 
     doc.setFontSize(20);
     doc.setFont('helvetica', 'bold');
-    doc.text('HMS RAPPORT', 105, 20, { align: 'center' });
+    doc.text(`${REPORT_COMPANY_NAME} - HMS RAPPORT`, 105, 20, { align: 'center' });
 
     doc.setFontSize(12);
     doc.setFont('helvetica', 'normal');
@@ -213,7 +214,7 @@ export function Reports() {
 
     doc.addPage();
     doc.setFontSize(10);
-    doc.text('I henhold til Arbeidstilsynet og Mattilsynet forskrifter', 105, 280, { align: 'center' });
+    doc.text(`${REPORT_COMPANY_NAME} | I henhold til Arbeidstilsynet og Mattilsynet forskrifter`, 105, 280, { align: 'center' });
 
     doc.save(`HMS_Rapport_${report.report_number}.pdf`);
   };

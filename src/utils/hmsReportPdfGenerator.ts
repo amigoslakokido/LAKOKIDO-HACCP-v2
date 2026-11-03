@@ -1,4 +1,5 @@
 import jsPDF from 'jspdf';
+import { REPORT_COMPANY_NAME } from '../lib/companyBranding';
 
 interface HMSReport {
  id: string;
@@ -71,7 +72,7 @@ export async function generateHMSReportPDF(report: HMSReport, details: ReportDet
 
  // 
  doc.setFontSize(10);
- doc.text('Amigos la Kokido AS', margin, 43);
+ doc.text(REPORT_COMPANY_NAME, margin, 43);
 
  const generatedDate = new Date(report.created_at).toLocaleDateString('nb-NO', {
  year: 'numeric',
@@ -296,7 +297,7 @@ export async function generateHMSReportPDF(report: HMSReport, details: ReportDet
  { align: 'center' }
  );
  doc.text(
- 'Amigos la Kokido AS - HMS Rapport',
+ `${REPORT_COMPANY_NAME} - HMS Rapport`,
  margin,
  pageHeight - 10
  );
