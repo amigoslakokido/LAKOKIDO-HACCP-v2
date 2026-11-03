@@ -1,357 +1,315 @@
-import { useState, useEffect } from 'react';
-import { supabase } from '../../lib/supabase';
+import { useEffect, useMemo, useState } from 'react';
 import {
-  TrendingUp, AlertTriangle, CheckCircle, ThermometerSun,
-  Activity, Award, Target, Clock, BarChart3, Shield,
-  Users, ClipboardCheck, Droplets, Flame, FileText
+  AlertTriangle,
+  ArrowRight,
+  BarChart3,
+  CalendarDays,
+  CheckCircle2,
+  ClipboardList,
+  FileText,
+  FlaskConical,
+  Loader2,
+  Sparkles,
+  Thermometer,
+  Users,
+  XCircle,
 } from 'lucide-react';
+import { supabase } from '../../lib/supabase';
 
-interface DashboardStats {
-  complianceRate: number;
-  tasksCompleted: number;
-  tasksTotal: number;
-  riskLevel: 'low' | 'medium' | 'high' | 'critical';
-  criticalAlerts: number;
-  avgTemperature: number;
-  tempViolations: number;
-  hygieneScore: number;
-  cleaningScore: number;
-  lastUpdate: string;
+interface DashboardProps {
+  onNavigate: (view: string) => void;
 }
 
-const themes = [
-  {
-    name: 'Ocean',
-    gradient: 'from-blue-600 via-cyan-600 to-teal-600',
-    cardFrom: 'from-blue-500',
-    cardTo: 'to-blue-600',
-    accent: 'blue'
-  },
-  {
-    name: 'Sunset',
-    gradient: 'from-orange-500 via-pink-500 to-purple-600',
-    cardFrom: 'from-orange-500',
-    cardTo: 'to-pink-600',
-    accent: 'orange'
-  },
-  {
-    name: 'Forest',
-    gradient: 'from-green-600 via-emerald-600 to-teal-600',
-    cardFrom: 'from-green-500',
-    cardTo: 'to-emerald-600',
-    accent: 'green'
-  },
-  {
-    name: 'Night',
-    gradient: 'from-indigo-600 via-purple-600 to-pink-600',
-    cardFrom: 'from-indigo-500',
-    cardTo: 'to-purple-600',
-    accent: 'indigo'
-  }
-];
+interface TemperatureRow {
+  id: string;
+  equipment_id: string;
+  temperature: number;
+  status: string;
+  log_time: string;
+  created_at: string;
+  equipmentName: string;
+  zoneName: string;
+}
 
-export function HACCPDashboard() {
-  const [stats, setStats] = useState<DashboardStats | null>(null);
+interface CleaningRow {
+  id: string;
+  task_id: string;
+  status: string;
+  log_time: string | null;
+  created_at: string;
+  taskName: string;
+}
+
+interface ReportRow {
+  id: string;
+  report_date: string;
+  report_type: string;
+  overall_status: string;
+}
+
+interface DashboardData {
+  reportCount: number;
+  activeEmployees: number;
+  temperatureViolations: number;
+  criticalAlerts: number;
+  todayTemperatures: TemperatureRow[];
+  todayCleaning: CleaningRow[];
+  cleaningTotal: number;
+  recentTemperatures: TemperatureRow[];
+  recentCleaning: CleaningRow[];
+  recentReports: ReportRow[];
+  lastSevenDays: { reports: number; temperatureViolations: number; cleaningTasks: number; criticalAlerts: number };
+}
+
+const emptyData: DashboardData = {
+  reportCount: 0,
+  activeEmployees: 0,
+  temperatureViolations: 0,
+  criticalAlerts: 0,
+  todayTemperatures: [],
+  todayCleaning: [],
+  cleaningTotal: 0,
+  recentTemperatures: [],
+  recentCleaning: [],
+  recentReports: [],
+  lastSevenDays: { reports: 0, temperatureViolations: 0, cleaningTasks: 0, criticalAlerts: 0 },
+};
+
+const norwegianDate = (date: Date) => date.toLocaleDateString('nb-NO', {
+  weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+});
+
+const timeLabel = (value: string | null | undefined) => {
+  if (!value) return '--:--';
+  if (value.includes('T')) return new Date(value).toLocaleTimeString('nb-NO', { hour: '2-digit', minute: '2-digit' });
+  return value.slice(0, 5);
+};
+
+const statusLabel = (status: string) => {
+  if (status === 'safe' || status === 'completed') return 'Trygt';
+  if (status === 'warning') return 'Advarsel';
+  if (status === 'danger' || status === 'fail') return 'Kritisk';
+  return status === 'incomplete' ? 'Gjenstår' : 'Ukjent';
+};
+
+const statusTone = (status: string) => {
+  if (status === 'safe' || status === 'completed') return 'bg-emerald-50 text-emerald-700';
+  if (status === 'warning') return 'bg-amber-50 text-amber-700';
+  if (status === 'danger' || status === 'fail') return 'bg-red-50 text-red-700';
+  return 'bg-slate-100 text-slate-600';
+};
+
+export function HACCPDashboard({ onNavigate }: DashboardProps) {
+  const [data, setData] = useState<DashboardData>(emptyData);
   const [loading, setLoading] = useState(true);
-  const [currentTime, setCurrentTime] = useState(new Date());
-  const [currentTheme, setCurrentTheme] = useState(0);
-  const [aiSuggestion, setAiSuggestion] = useState('');
+  const [now, setNow] = useState(new Date());
 
   useEffect(() => {
-    loadStats();
-
-    const statsInterval = setInterval(loadStats, 10 * 60 * 1000);
-    const timeInterval = setInterval(() => setCurrentTime(new Date()), 1000);
-    const themeInterval = setInterval(() => {
-      setCurrentTheme(prev => (prev + 1) % themes.length);
-      generateAISuggestion();
-    }, 10 * 60 * 1000);
-
-    generateAISuggestion();
-
+    void loadDashboard();
+    const refresh = window.setInterval(() => void loadDashboard(), 10 * 60 * 1000);
+    const clock = window.setInterval(() => setNow(new Date()), 60 * 1000);
     return () => {
-      clearInterval(statsInterval);
-      clearInterval(timeInterval);
-      clearInterval(themeInterval);
+      window.clearInterval(refresh);
+      window.clearInterval(clock);
     };
   }, []);
 
-  const loadStats = async () => {
+  const loadDashboard = async () => {
     try {
       const today = new Date().toISOString().split('T')[0];
+      const sevenDaysAgo = new Date();
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
+      const startDate = sevenDaysAgo.toISOString().split('T')[0];
 
       const [
-        { data: tempLogs },
-        { data: cleaningData, count: cleaningCompleted },
-        { count: cleaningTotal },
-        { data: hygieneData },
-        { data: incidents },
-        { data: routineTasks }
+        reportsCount,
+        employeesCount,
+        todayTemps,
+        recentTemps,
+        equipmentResult,
+        zonesResult,
+        todayCleaning,
+        recentCleaning,
+        cleaningTasks,
+        recentReports,
+        weekReports,
+        openIncidents,
+        weekIncidents,
       ] = await Promise.all([
-        supabase.from('temperature_logs').select('temperature, status').eq('log_date', today),
-        supabase.from('cleaning_logs').select('*', { count: 'exact' }).eq('log_date', today).eq('status', 'completed'),
-        supabase.from('cleaning_tasks').select('*', { count: 'exact', head: true }).eq('active', true),
-        supabase.from('hygiene_checks').select('*').eq('check_date', today),
-        supabase.from('critical_incidents').select('*').eq('status', 'open'),
-        supabase.from('routine_task_logs').select('*').eq('log_date', today)
+        supabase.from('haccp_daily_reports').select('id', { count: 'exact', head: true }),
+        supabase.from('employees').select('id', { count: 'exact', head: true }).eq('active', true).eq('status', 'active'),
+        supabase.from('temperature_logs').select('*').eq('log_date', today).order('log_time', { ascending: false }),
+        supabase.from('temperature_logs').select('*').order('created_at', { ascending: false }).limit(5),
+        supabase.from('equipment').select('id, name, zone_id'),
+        supabase.from('zones').select('id, name'),
+        supabase.from('cleaning_logs').select('*').eq('log_date', today).order('created_at', { ascending: false }),
+        supabase.from('cleaning_logs').select('*').order('created_at', { ascending: false }).limit(5),
+        supabase.from('cleaning_tasks').select('id, task_name, name_no').eq('active', true),
+        supabase.from('haccp_daily_reports').select('id, report_date, report_type, overall_status').order('report_date', { ascending: false }).limit(5),
+        supabase.from('haccp_daily_reports').select('id', { count: 'exact', head: true }).gte('report_date', startDate),
+        supabase.from('critical_incidents').select('id', { count: 'exact', head: true }).eq('status', 'open'),
+        supabase.from('critical_incidents').select('id', { count: 'exact', head: true }).gte('incident_date', startDate),
       ]);
 
-      const avgTemp = tempLogs?.length
-        ? tempLogs.reduce((sum, log) => sum + parseFloat(log.temperature), 0) / tempLogs.length
-        : 0;
+      const equipmentMap = new Map((equipmentResult.data || []).map((item) => [item.id, item]));
+      const zoneMap = new Map((zonesResult.data || []).map((zone) => [zone.id, zone.name]));
+      const taskMap = new Map((cleaningTasks.data || []).map((task) => [task.id, task.task_name || task.name_no || 'Oppgave']));
 
-      const tempViolations = tempLogs?.filter(log => log.status !== 'safe').length || 0;
+      const decorateTemperature = (row: Record<string, unknown>): TemperatureRow => {
+        const equipment = equipmentMap.get(String(row.equipment_id));
+        return {
+          id: String(row.id),
+          equipment_id: String(row.equipment_id),
+          temperature: Number(row.temperature),
+          status: String(row.status),
+          log_time: String(row.log_time || ''),
+          created_at: String(row.created_at || ''),
+          equipmentName: equipment?.name || 'Ukjent utstyr',
+          zoneName: equipment?.zone_id ? zoneMap.get(equipment.zone_id) || 'Ukjent sone' : 'Ukjent sone',
+        };
+      };
 
-      const hygienePass = hygieneData?.filter(h =>
-        h.uniform_clean && h.hands_washed && h.jewelry_removed && h.illness_free
-      ).length || 0;
-      const hygieneScore = hygieneData?.length ? (hygienePass / hygieneData.length) * 100 : 100;
+      const decorateCleaning = (row: Record<string, unknown>): CleaningRow => ({
+        id: String(row.id),
+        task_id: String(row.task_id),
+        status: String(row.status || (row.is_completed ? 'completed' : 'incomplete')),
+        log_time: row.log_time ? String(row.log_time) : null,
+        created_at: String(row.created_at || ''),
+        taskName: taskMap.get(String(row.task_id)) || 'Rengjøringsoppgave',
+      });
 
-      const cleaningScore = cleaningTotal ? ((cleaningCompleted || 0) / cleaningTotal) * 100 : 100;
+      const todayTemperatureRows = (todayTemps.data || []).map((row) => decorateTemperature(row as Record<string, unknown>));
+      const recentTemperatureRows = (recentTemps.data || []).map((row) => decorateTemperature(row as Record<string, unknown>));
+      const todayCleaningRows = (todayCleaning.data || []).map((row) => decorateCleaning(row as Record<string, unknown>));
+      const recentCleaningRows = (recentCleaning.data || []).map((row) => decorateCleaning(row as Record<string, unknown>));
+      const weekTemperatureViolations = todayTemperatureRows.filter((row) => row.status !== 'safe').length;
 
-      const totalTasks = (cleaningTotal || 0) + (hygieneData?.length || 0);
-      const completedTasks = (cleaningCompleted || 0) + hygienePass;
-
-      const totalChecks = totalTasks + (tempLogs?.length || 0);
-      const violations = tempViolations + (totalTasks - completedTasks);
-      const complianceRate = totalChecks > 0 ? ((totalChecks - violations) / totalChecks) * 100 : 100;
-
-      let riskLevel: 'low' | 'medium' | 'high' | 'critical' = 'low';
-      if (incidents && incidents.length > 0) riskLevel = 'critical';
-      else if (tempViolations > 5) riskLevel = 'high';
-      else if (complianceRate < 85) riskLevel = 'medium';
-
-      setStats({
-        complianceRate: Math.round(complianceRate),
-        tasksCompleted: completedTasks,
-        tasksTotal: totalTasks,
-        riskLevel,
-        criticalAlerts: incidents?.length || 0,
-        avgTemperature: Math.round(avgTemp * 10) / 10,
-        tempViolations,
-        hygieneScore: Math.round(hygieneScore),
-        cleaningScore: Math.round(cleaningScore),
-        lastUpdate: new Date().toLocaleTimeString('nb-NO')
+      setData({
+        reportCount: reportsCount.count || 0,
+        activeEmployees: employeesCount.count || 0,
+        temperatureViolations: weekTemperatureViolations,
+        criticalAlerts: openIncidents.count || 0,
+        todayTemperatures: todayTemperatureRows,
+        todayCleaning: todayCleaningRows,
+        cleaningTotal: cleaningTasks.data?.length || 0,
+        recentTemperatures: recentTemperatureRows,
+        recentCleaning: recentCleaningRows,
+        recentReports: (recentReports.data || []) as ReportRow[],
+        lastSevenDays: {
+          reports: weekReports.count || 0,
+          temperatureViolations: weekTemperatureViolations,
+          cleaningTasks: recentCleaningRows.length,
+          criticalAlerts: weekIncidents.count || 0,
+        },
       });
     } catch (error) {
-      console.error('Error loading stats:', error);
+      console.error('Error loading HACCP dashboard:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  const generateAISuggestion = () => {
-    const suggestions = [
-      'Øk temperatursjekkfrekvensen i kjølere for bedre kontroll',
-      'Planlegg ekstra rengjøringsrunde i helgen for optimal hygiene',
-      'Vurder å oppdatere HACCP-prosedyrer basert på siste rapporter',
-      'Sjekk at alle ansatte har oppdatert hygieneopplæring',
-      'Gjennomgå og optimaliser arbeidsflyt for temperaturtesting',
-      'Planlegg intern audit av kritiske kontrollpunkter'
-    ];
-    setAiSuggestion(suggestions[Math.floor(Math.random() * suggestions.length)]);
-  };
-
-  const getRiskColor = (risk: string) => {
-    switch (risk) {
-      case 'critical': return 'bg-red-600 text-white';
-      case 'high': return 'bg-orange-500 text-white';
-      case 'medium': return 'bg-yellow-500 text-white';
-      default: return 'bg-green-600 text-white';
-    }
-  };
-
-  const getRiskLabel = (risk: string) => {
-    switch (risk) {
-      case 'critical': return 'KRITISK';
-      case 'high': return 'HØY';
-      case 'medium': return 'MIDDELS';
-      default: return 'LAV';
-    }
-  };
+  const completedCleaning = useMemo(
+    () => data.todayCleaning.filter((log) => log.status === 'completed').length,
+    [data.todayCleaning],
+  );
+  const cleaningPercent = data.cleaningTotal ? Math.round((completedCleaning / data.cleaningTotal) * 100) : 0;
+  const temperatureGroups = useMemo(() => {
+    const groups = new Map<string, { total: number; safe: number }>();
+    data.todayTemperatures.forEach((row) => {
+      const current = groups.get(row.zoneName) || { total: 0, safe: 0 };
+      current.total += 1;
+      if (row.status === 'safe') current.safe += 1;
+      groups.set(row.zoneName, current);
+    });
+    return Array.from(groups.entries());
+  }, [data.todayTemperatures]);
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center h-96">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600 font-medium">Laster dashboard...</p>
-        </div>
-      </div>
-    );
+    return <div className="flex min-h-[520px] items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-blue-600" /></div>;
   }
 
-  if (!stats) return null;
-
-  const theme = themes[currentTheme];
+  const statCards = [
+    { label: 'Totale rapporter', value: data.reportCount, note: 'Alle rapporter', icon: FileText, tone: 'emerald' },
+    { label: 'Aktive ansatte', value: data.activeEmployees, note: 'Med tilgang', icon: Users, tone: 'blue' },
+    { label: 'Temperaturavvik', value: data.temperatureViolations, note: 'I dag', icon: Thermometer, tone: 'amber' },
+    { label: 'Kritiske varsler', value: data.criticalAlerts, note: 'Krever oppfølging', icon: AlertTriangle, tone: 'red' },
+  ];
+  const toneClasses: Record<string, string> = {
+    emerald: 'bg-emerald-100 text-emerald-700', blue: 'bg-blue-100 text-blue-700', amber: 'bg-amber-100 text-amber-700', red: 'bg-red-100 text-red-700',
+  };
 
   return (
-    <div className="space-y-6 animate-fadeIn">
-      <div className={`bg-gradient-to-br ${theme.gradient} rounded-3xl p-8 text-white shadow-2xl relative overflow-hidden`}>
-        <div className="absolute inset-0 bg-white opacity-5" style={{
-          backgroundImage: 'radial-gradient(circle at 2px 2px, white 1px, transparent 0)',
-          backgroundSize: '40px 40px'
-        }}></div>
-
-        <div className="relative z-10">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <div className="flex items-center gap-3 mb-2">
-                <Shield className="w-10 h-10" />
-                <h1 className="text-4xl font-bold">HACCP Dashboard</h1>
-              </div>
-              <p className="text-lg opacity-90">
-                {currentTime.toLocaleDateString('nb-NO', {
-                  weekday: 'long',
-                  year: 'numeric',
-                  month: 'long',
-                  day: 'numeric'
-                })}
-              </p>
-            </div>
-            <div className="text-right">
-              <div className="text-6xl font-bold mb-1 tracking-tight">
-                {currentTime.toLocaleTimeString('nb-NO', {
-                  hour: '2-digit',
-                  minute: '2-digit'
-                })}
-              </div>
-              <div className="text-sm opacity-75">Oppdateres automatisk</div>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="bg-white bg-opacity-10 backdrop-blur-lg rounded-2xl p-6 border border-white border-opacity-20">
-              <div className="flex items-center justify-between mb-4">
-                <Award className="w-12 h-12" />
-                <div className="text-right">
-                  <div className="text-5xl font-bold">{stats.complianceRate}%</div>
-                  <div className="text-sm opacity-90">Etterlevelse</div>
-                </div>
-              </div>
-              <div className="h-3 bg-white bg-opacity-20 rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-white rounded-full transition-all duration-1000"
-                  style={{ width: `${stats.complianceRate}%` }}
-                ></div>
-              </div>
-            </div>
-
-            <div className={`${getRiskColor(stats.riskLevel)} rounded-2xl p-6 shadow-lg transform hover:scale-105 transition-transform`}>
-              <div className="flex items-center justify-between mb-4">
-                <Flame className="w-12 h-12" />
-                <div className="text-right">
-                  <div className="text-4xl font-bold">{getRiskLabel(stats.riskLevel)}</div>
-                  <div className="text-sm opacity-90">Risikonivå</div>
-                </div>
-              </div>
-              {stats.criticalAlerts > 0 && (
-                <div className="text-sm font-medium">
-                  ⚠️ {stats.criticalAlerts} aktive varsler
-                </div>
-              )}
-            </div>
-          </div>
+    <div className="space-y-6">
+      <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
+        <div>
+          <p className="mb-2 text-sm font-semibold uppercase tracking-[0.16em] text-blue-600">Sanntidsoversikt</p>
+          <h1 className="text-3xl font-bold tracking-tight text-slate-950 sm:text-4xl">HACCP Dashboard</h1>
+          <p className="mt-2 text-slate-500">Sann­tidsoversikt over matsikkerhet og daglige oppgaver</p>
+        </div>
+        <div className="flex items-center gap-3 text-sm text-slate-500">
+          <CalendarDays className="h-4 w-4 text-blue-600" />
+          <span className="capitalize">{norwegianDate(now)}</span>
+          <span className="hidden text-slate-300 sm:inline">·</span>
+          <span className="hidden sm:inline">Kl. {now.toLocaleTimeString('nb-NO', { hour: '2-digit', minute: '2-digit' })}</span>
         </div>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className={`bg-gradient-to-br ${theme.cardFrom} ${theme.cardTo} rounded-2xl p-6 text-white shadow-lg hover:shadow-2xl transition-all transform hover:scale-105`}>
-          <div className="flex items-center gap-3 mb-3">
-            <ClipboardCheck className="w-8 h-8" />
-            <div className="text-3xl font-bold">{stats.tasksCompleted}/{stats.tasksTotal}</div>
-          </div>
-          <div className="text-sm opacity-90">Oppgaver fullført</div>
-        </div>
-
-        <div className="bg-gradient-to-br from-cyan-500 to-blue-600 rounded-2xl p-6 text-white shadow-lg hover:shadow-2xl transition-all transform hover:scale-105">
-          <div className="flex items-center gap-3 mb-3">
-            <ThermometerSun className="w-8 h-8" />
-            <div className="text-3xl font-bold">{stats.avgTemperature}°C</div>
-          </div>
-          <div className="text-sm opacity-90">Gj.snitt temp</div>
-        </div>
-
-        <div className={`bg-gradient-to-br ${stats.criticalAlerts > 0 ? 'from-red-500 to-red-700' : 'from-gray-400 to-gray-600'} rounded-2xl p-6 text-white shadow-lg hover:shadow-2xl transition-all transform hover:scale-105`}>
-          <div className="flex items-center gap-3 mb-3">
-            <AlertTriangle className="w-8 h-8" />
-            <div className="text-3xl font-bold">{stats.criticalAlerts}</div>
-          </div>
-          <div className="text-sm opacity-90">Kritiske varsler</div>
-        </div>
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {statCards.map((card) => {
+          const Icon = card.icon;
+          return <div key={card.label} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_8px_24px_rgba(15,23,42,0.05)] transition hover:-translate-y-0.5 hover:shadow-lg">
+            <div className="flex items-start justify-between"><div className={`rounded-xl p-3 ${toneClasses[card.tone]}`}><Icon className="h-6 w-6" /></div><span className="mt-1 h-2.5 w-2.5 rounded-full bg-emerald-500" /></div>
+            <p className="mt-5 text-sm font-semibold text-slate-500">{card.label}</p>
+            <p className="mt-1 text-3xl font-bold text-slate-950">{card.value}</p>
+            <p className="mt-1 text-xs text-slate-400">{card.note}</p>
+          </div>;
+        })}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white rounded-2xl p-6 shadow-lg border-l-4 border-cyan-500">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3">
-              <div className="p-3 bg-cyan-100 rounded-xl">
-                <Droplets className="w-6 h-6 text-cyan-600" />
-              </div>
-              <div>
-                <div className="text-2xl font-bold text-gray-900">{stats.hygieneScore}%</div>
-                <div className="text-sm text-gray-600">Hygienescore</div>
-              </div>
-            </div>
-          </div>
-          <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
-            <div
-              className="h-full bg-cyan-500 transition-all duration-1000"
-              style={{ width: `${stats.hygieneScore}%` }}
-            ></div>
-          </div>
+      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_8px_24px_rgba(15,23,42,0.04)] sm:p-6">
+        <div className="mb-4"><h2 className="text-lg font-bold text-slate-950">Hurtighandlinger</h2><p className="text-sm text-slate-500">Vanlige oppgaver – klikk for å komme i gang</p></div>
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <button onClick={() => onNavigate('temperature')} className="flex items-center gap-3 rounded-xl bg-emerald-600 px-4 py-3 text-left text-white transition hover:bg-emerald-700"><Thermometer className="h-7 w-7" /><span><strong className="block">Ny temperaturmåling</strong><small className="text-emerald-100">Registrer temperatur</small></span></button>
+          <button onClick={() => onNavigate('cleaning')} className="flex items-center gap-3 rounded-xl bg-blue-600 px-4 py-3 text-left text-white transition hover:bg-blue-700"><Sparkles className="h-7 w-7" /><span><strong className="block">Ny rengjøringsoppgave</strong><small className="text-blue-100">Logg rengjøring</small></span></button>
+          <button onClick={() => onNavigate('reports')} className="flex items-center gap-3 rounded-xl bg-orange-500 px-4 py-3 text-left text-white transition hover:bg-orange-600"><FileText className="h-7 w-7" /><span><strong className="block">Opprett rapport</strong><small className="text-orange-100">Åpne rapporter</small></span></button>
+          <button onClick={() => void loadDashboard()} className="flex items-center gap-3 rounded-xl bg-blue-50 px-4 py-3 text-left text-blue-700 transition hover:bg-blue-100"><BarChart3 className="h-7 w-7" /><span><strong className="block">Se dagens status</strong><small className="text-blue-500">Oppdater oversikten</small></span></button>
         </div>
+      </section>
 
-        <div className="bg-white rounded-2xl p-6 shadow-lg border-l-4 border-orange-500">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3">
-              <div className="p-3 bg-orange-100 rounded-xl">
-                <Activity className="w-6 h-6 text-orange-600" />
-              </div>
-              <div>
-                <div className="text-2xl font-bold text-gray-900">{stats.cleaningScore}%</div>
-                <div className="text-sm text-gray-600">Rengjøring</div>
-              </div>
-            </div>
-          </div>
-          <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
-            <div
-              className="h-full bg-orange-500 transition-all duration-1000"
-              style={{ width: `${stats.cleaningScore}%` }}
-            ></div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-2xl p-6 shadow-lg border-l-4 border-indigo-500">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3">
-              <div className="p-3 bg-indigo-100 rounded-xl">
-                <Target className="w-6 h-6 text-indigo-600" />
-              </div>
-              <div>
-                <div className="text-2xl font-bold text-gray-900">{stats.tempViolations}</div>
-                <div className="text-sm text-gray-600">Temp-avvik</div>
-              </div>
-            </div>
-          </div>
-        </div>
+      <div className="grid gap-5 xl:grid-cols-3">
+        <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><SectionHeading icon={Thermometer} title="Temperaturstatus i dag" onClick={() => onNavigate('temperature')} />
+          <div className="mt-4 space-y-3">{temperatureGroups.length === 0 ? <EmptyState text="Ingen målinger registrert i dag" /> : temperatureGroups.slice(0, 5).map(([zone, values]) => <div key={zone} className="flex items-center justify-between text-sm"><span className="text-slate-600">{zone}</span><span className="flex items-center gap-2 font-semibold text-slate-700">{values.safe} / {values.total}<span className={`rounded-full p-1 ${values.safe === values.total ? 'bg-emerald-100 text-emerald-600' : 'bg-red-100 text-red-600'}`}>{values.safe === values.total ? <CheckCircle2 className="h-4 w-4" /> : <XCircle className="h-4 w-4" />}</span></span></div>)}</div>
+        </section>
+        <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><SectionHeading icon={Sparkles} title="Rengjøringsoppgaver i dag" onClick={() => onNavigate('cleaning')} />
+          <div className="mt-4 flex items-center gap-5"><div className="relative grid h-28 w-28 shrink-0 place-items-center rounded-full" style={{ background: `conic-gradient(#10b981 ${cleaningPercent}%, #e2e8f0 0)` }}><div className="grid h-20 w-20 place-items-center rounded-full bg-white"><span className="text-xl font-bold text-slate-900">{cleaningPercent}%</span></div></div><div className="space-y-3 text-sm"><p className="flex items-center gap-2 text-slate-600"><span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />{completedCleaning} Fullført</p><p className="flex items-center gap-2 text-slate-600"><span className="h-2.5 w-2.5 rounded-full bg-slate-400" />{Math.max(data.cleaningTotal - completedCleaning, 0)} Gjenstår</p></div></div>
+        </section>
+        <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><SectionHeading icon={BarChart3} title="Siste 7 dager" onClick={() => onNavigate('reports')} /><div className="mt-3 divide-y divide-slate-100">{[['Rapporter', data.lastSevenDays.reports, FileText], ['Temperaturavvik', data.lastSevenDays.temperatureViolations, Thermometer], ['Rengjøringsoppgaver', data.lastSevenDays.cleaningTasks, Sparkles], ['Kritiske varsler', data.lastSevenDays.criticalAlerts, AlertTriangle]].map(([label, value, Icon]) => <div key={String(label)} className="flex items-center justify-between py-2.5 text-sm"><span className="flex items-center gap-2 text-slate-600"><Icon className="h-4 w-4 text-slate-400" />{label}</span><strong className="text-slate-900">{value}</strong></div>)}</div></section>
       </div>
 
-      <div className="bg-gradient-to-r from-purple-50 to-blue-50 border-2 border-purple-200 rounded-2xl p-6">
-        <div className="flex items-start gap-4">
-          <div className="p-3 bg-purple-500 rounded-xl">
-            <BarChart3 className="w-6 h-6 text-white" />
-          </div>
-          <div className="flex-1">
-            <h3 className="text-lg font-bold text-purple-900 mb-2">🤖 AI-forslag for forbedring</h3>
-            <p className="text-purple-800">{aiSuggestion}</p>
-            <div className="mt-3 text-xs text-purple-600 flex items-center gap-2">
-              <Clock className="w-4 h-4" />
-              <span>Oppdatert: {stats.lastUpdate}</span>
-            </div>
-          </div>
-        </div>
+      <div className="grid gap-5 xl:grid-cols-3">
+        <RecentTemperatures rows={data.recentTemperatures} />
+        <RecentCleaning rows={data.recentCleaning} />
+        <RecentReports rows={data.recentReports} onNavigate={onNavigate} />
       </div>
     </div>
   );
+}
+
+function SectionHeading({ icon: Icon, title, onClick }: { icon: typeof Thermometer; title: string; onClick: () => void }) {
+  return <div className="flex items-center justify-between"><h2 className="flex items-center gap-2 text-base font-bold text-slate-950"><Icon className="h-5 w-5 text-blue-600" />{title}</h2><button onClick={onClick} className="rounded-lg p-1 text-slate-400 transition hover:bg-slate-100 hover:text-blue-600"><ArrowRight className="h-5 w-5" /></button></div>;
+}
+
+function EmptyState({ text }: { text: string }) { return <p className="rounded-xl bg-slate-50 px-3 py-4 text-center text-sm text-slate-500">{text}</p>; }
+
+function RecentTemperatures({ rows }: { rows: TemperatureRow[] }) {
+  return <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><SectionHeading icon={Thermometer} title="Siste temperaturmålinger" onClick={() => {}} /><div className="mt-4 space-y-2">{rows.length === 0 ? <EmptyState text="Ingen temperaturmålinger funnet" /> : rows.map((row) => <div key={row.id} className="flex items-center justify-between gap-2 rounded-xl bg-slate-50 px-3 py-2.5 text-sm"><span className="min-w-0 truncate font-medium text-slate-700">{row.equipmentName}</span><span className="whitespace-nowrap font-semibold text-slate-800">{row.temperature}°C</span><span className="whitespace-nowrap text-xs text-slate-400">{timeLabel(row.log_time)}</span><span className={`whitespace-nowrap rounded-full px-2 py-1 text-xs font-semibold ${statusTone(row.status)}`}>{statusLabel(row.status)}</span></div>)}</div></section>;
+}
+
+function RecentCleaning({ rows }: { rows: CleaningRow[] }) {
+  return <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><SectionHeading icon={Sparkles} title="Siste rengjøringsoppgaver" onClick={() => {}} /><div className="mt-4 space-y-2">{rows.length === 0 ? <EmptyState text="Ingen rengjøringsoppgaver funnet" /> : rows.map((row) => <div key={row.id} className="flex items-center justify-between gap-2 rounded-xl bg-slate-50 px-3 py-2.5 text-sm"><span className="min-w-0 truncate font-medium text-slate-700">{row.taskName}</span><span className="text-xs text-slate-400">{timeLabel(row.log_time || row.created_at)}</span><span className={`rounded-full px-2 py-1 text-xs font-semibold ${statusTone(row.status)}`}>{statusLabel(row.status)}</span></div>)}</div></section>;
+}
+
+function RecentReports({ rows, onNavigate }: { rows: ReportRow[]; onNavigate: (view: string) => void }) {
+  return <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><SectionHeading icon={FileText} title="Siste rapporter" onClick={() => onNavigate('reports')} /><div className="mt-4 space-y-2">{rows.length === 0 ? <EmptyState text="Ingen rapporter funnet" /> : rows.map((row) => <div key={row.id} className="flex items-center justify-between gap-2 rounded-xl bg-slate-50 px-3 py-2.5 text-sm"><div className="min-w-0"><p className="truncate font-medium text-slate-700">{row.report_type === 'automatic' ? 'Automatisk HACCP-rapport' : 'HACCP-rapport'}</p><p className="text-xs text-slate-400">{new Date(row.report_date).toLocaleDateString('nb-NO')}</p></div><button onClick={() => onNavigate('reports')} className="rounded-lg bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-700 transition hover:bg-blue-100">Vis</button></div>)}</div></section>;
 }

@@ -699,7 +699,7 @@ export function DailyRoutine({ language: propLanguage }: DailyRoutineProps) {
  tomorrow11AM.setDate(tomorrow11AM.getDate() + 1);
  tomorrow11AM.setHours(11, 0, 0, 0);
 
- const timeUntilUnlock = tomorrow11AM.getTime()now.getTime();
+ const timeUntilUnlock = tomorrow11AM.getTime() - now.getTime();
  const hoursUntilUnlock = Math.floor(timeUntilUnlock / (1000 * 60 * 60));
  const minutesUntilUnlock = Math.floor((timeUntilUnlock % (1000 * 60 * 60)) / (1000 * 60));
 
